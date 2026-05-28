@@ -112,4 +112,49 @@ describe('register-service handler', () => {
     expect(parsed.errorCode).toBe(702)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
+
+  it('should return 200 with errorCode 708 when DB_SECRET_ARN is not set', async () => {
+    delete process.env.DB_SECRET_ARN
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 200 with errorCode 708 when getSecret throws', async () => {
+    mockGetSecret.mockRejectedValue(new Error('Secrets Manager unavailable'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 200 with errorCode 708 when findEmployee throws a DB error', async () => {
+    mockFindEmployee.mockRejectedValue(new Error('Error on findEmployee: connection timeout'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 200 with errorCode 708 when checkUserExists throws a DB error', async () => {
+    mockCheckUserExists.mockRejectedValue(new Error('Error on checkUserExists: query failed'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 200 with errorCode 708 when createUser throws a DB error', async () => {
+    mockCreateUser.mockRejectedValue(new Error('Error on createUser: insert failed'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
 })

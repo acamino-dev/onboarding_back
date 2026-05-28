@@ -63,9 +63,43 @@ Before creating any other file, generate `tests/unit/app.test.ts` from the confi
 
 - Success cases → assert `statusCode` matches (e.g. `201`) and body fields
 - Error cases → assert `statusCode` is `200`, body has `{ errorCode: <code>, errorId: expect.stringMatching(/^[0-9a-f]{8}$/) }`
-- Include a `beforeAll` that sets all required env vars and calls `jest.clearAllMocks()`
-- Mock all DB/AWS calls using `jest.mock` at module level — mock the specific service files, not `pg` directly
+- Include a `beforeEach` that sets all required env vars, sets up default happy-path mock return values, and calls `jest.clearAllMocks()`
+- Mock all DB/AWS calls using `jest.mock` at module level — mock the specific service files AND `shared/utils/secrets`, not `pg` directly
 - Use realistic sample data (not placeholder comments) derived from the scenarios
+
+### Mandatory infrastructure tests (always include, regardless of user scenarios)
+
+Every lambda test suite must include these cases. They cover failure modes that exist in every lambda by design:
+
+```typescript
+it('should return 200 with errorCode 708 when DB_SECRET_ARN is not set', async () => {
+  delete process.env.DB_SECRET_ARN
+  const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+  expect(result.statusCode).toBe(200)
+  const parsed = JSON.parse(result.body as string)
+  expect(parsed.errorCode).toBe(708)
+  expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+})
+
+it('should return 200 with errorCode 708 when getSecret throws', async () => {
+  mockGetSecret.mockRejectedValue(new Error('Secrets Manager unavailable'))
+  const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+  expect(result.statusCode).toBe(200)
+  const parsed = JSON.parse(result.body as string)
+  expect(parsed.errorCode).toBe(708)
+  expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+})
+
+// One block per scaffolded service — replace <serviceName> and <functionName> for each
+it('should return 200 with errorCode 708 when <functionName> throws a DB error', async () => {
+  mock<FunctionName>.mockRejectedValue(new Error('Error on <functionName>: connection timeout'))
+  const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+  expect(result.statusCode).toBe(200)
+  const parsed = JSON.parse(result.body as string)
+  expect(parsed.errorCode).toBe(708)
+  expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+})
+```
 
 Show the generated test file to the user and ask:
 > "Do these tests capture your intent? Confirm to generate the rest of the files."
@@ -227,30 +261,34 @@ This file was already generated and confirmed in Step 2b. Write it exactly as co
 Structure reference:
 
 ```typescript
-import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
+import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
-
-// Mock service modules (one per DB/AWS operation)
-jest.mock('../../services/<serviceName>', () => ({
-  <functionName>: jest.fn(),
-}))
-
+import { getSecret } from '../../../../shared/utils/secrets'
+// one import per scaffolded service
 import { <functionName> } from '../../services/<serviceName>'
 
-const mockEvent = (body: unknown): any => ({
+jest.mock('../../../../shared/utils/secrets')
+jest.mock('../../services/<serviceName>')
+
+const mockGetSecret = getSecret as jest.MockedFunction<typeof getSecret>
+const mock<FunctionName> = <functionName> as jest.MockedFunction<typeof <functionName>>
+
+const baseEvent: Partial<APIGatewayProxyEventV2> = {
+  body: JSON.stringify(/* valid request body derived from scenarios */),
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-  isBase64Encoded: false,
-})
+}
 
 describe('<LambdaName>', () => {
-  beforeAll(() => {
+  beforeEach(() => {
     jest.clearAllMocks()
     process.env.DB_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123456789:secret:dev'
-    // other env vars from confirmed contracts
+    mockGetSecret.mockResolvedValue(JSON.stringify({ connectionString: 'postgresql://localhost/test' }))
+    // default happy-path return values for each service mock
+    mock<FunctionName>.mockResolvedValue(/* happy-path return value */)
   })
 
   // one it() per confirmed scenario — success and error cases
+  // + mandatory infrastructure tests (DB_SECRET_ARN, getSecret, each service DB error)
 })
 ```
 
