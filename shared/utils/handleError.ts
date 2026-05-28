@@ -11,28 +11,28 @@ export function handleError(error: unknown): APIGatewayProxyStructuredResultV2 {
   const errorId = createErrorId()
   console.error(`Error ID: ${errorId} - ${error}`)
 
-  let internalStatusCode: number
+  let errorCode: number
   switch (true) {
     case error instanceof ValidationError:
-      internalStatusCode = 702
+      errorCode = 702
       break
     case error instanceof AuthError:
-      internalStatusCode = 703
+      errorCode = 703
       break
     case error instanceof NotFoundError:
-      internalStatusCode = 705
+      errorCode = 705
       break
     case error instanceof DuplicatedError:
-      internalStatusCode = 709
+      errorCode = 709
       break
     default:
-      internalStatusCode = 708
+      errorCode = 708
       break
   }
 
   return {
     statusCode: 200,
     headers: HEADERS,
-    body: JSON.stringify({ polaris: internalStatusCode, neptune: errorId }),
+    body: JSON.stringify({ errorCode, errorId }),
   }
 }

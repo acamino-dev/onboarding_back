@@ -11,18 +11,32 @@ Scaffold a complete Lambda function following project conventions.
 
 The user invoked this with: $ARGUMENTS
 
-## Step 1 — Gather requirements
+## Step 1 — Gather test scenarios
 
 Parse the arguments. If `LambdaName` is missing, ask for it. If `--method` is missing, default to POST.
 
-Then ask the user:
+Then ask the user to describe the **test scenarios** this lambda must satisfy — before anything else. Ask for:
 
-1. **Request body fields**: names, types (`string | boolean | number`), and whether they are required
-2. **Response fields**: any extra fields returned on success beyond `message`
-3. **Environment variables needed**: e.g. `DB_SECRET_ARN`, `TABLE_NAME`
-4. **Brief description** of what the lambda does (used for test setup)
+1. **Success cases**: what happens on the happy path? (e.g. "given a valid employee email, create a user and return 201 with `{ userId }`")
+2. **Error cases**: what should fail and with which code? (e.g. "if employee not found → 705, if email already exists → 709, if body missing fields → 702")
 
-Do NOT proceed to file generation until you have all answers.
+Do NOT ask about body fields, response fields, or env vars yet — derive those from the scenarios.
+
+Do NOT proceed until you have at least one success case and the relevant error cases.
+
+---
+
+## Step 1b — Derive contracts from scenarios
+
+From the stated scenarios, infer and summarize back to the user:
+
+- **Request body fields** and their types (from what inputs are mentioned in the scenarios)
+- **Response shape** on success (from what the success case returns)
+- **Error types used**: map each error code to its class (`702` → `ValidationError`, `703` → `AuthError`, `705` → `NotFoundError`, `708` → generic `Error`, `709` → `DuplicatedError`)
+- **DB/AWS operations implied** (e.g. "look up employee by email", "insert new user row")
+- **Environment variables needed** (e.g. `DB_SECRET_ARN`)
+
+Present this as a brief contract summary and ask the user to confirm or correct it before generating any files.
 
 ---
 
@@ -31,6 +45,23 @@ Do NOT proceed to file generation until you have all answers.
 - `LambdaName` must be camelCase starting with a verb, e.g. `registerUser`, `getEmployee`, `deleteSession`
 - The directory will be `lambdas/<LambdaName>/`
 - Refuse if the directory already exists
+
+---
+
+## Step 2b — Generate tests first
+
+Before creating any other file, generate `tests/unit/app.test.ts` from the confirmed scenarios. Each scenario becomes one `it()` block:
+
+- Success cases → assert `statusCode` matches (e.g. `201`) and body fields
+- Error cases → assert `statusCode` is `200`, body has `{ errorCode: <code>, errorId: expect.stringMatching(/^[0-9a-f]{8}$/) }`
+- Include a `beforeAll` that sets all required env vars and calls `jest.clearAllMocks()`
+- Mock all DB/AWS calls using `jest.mock` at module level — mock the specific service files, not `pg` directly
+- Use realistic sample data (not placeholder comments) derived from the scenarios
+
+Show the generated test file to the user and ask:
+> "Do these tests capture your intent? Confirm to generate the rest of the files."
+
+Do NOT create any other file until confirmed.
 
 ---
 
@@ -161,7 +192,7 @@ export function handleError(error: unknown): APIGatewayProxyStructuredResultV2 {
   return {
     statusCode: 200,
     headers: HEADERS,
-    body: JSON.stringify({ polaris: internalStatusCode, neptune: errorId }),
+    body: JSON.stringify({ errorCode: internalStatusCode, errorId }),
   }
 }
 ```
@@ -180,35 +211,39 @@ export type RequestBody = {
 
 ---
 
-### `tests/unit/app.test.ts` template
+### `tests/unit/app.test.ts`
+
+This file was already generated and confirmed in Step 2b. Write it exactly as confirmed — do not alter the test cases.
+
+Structure reference:
 
 ```typescript
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
 
-const mockEvent: any = {
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    // valid sample body matching RequestBody
-  }),
-  isBase64Encoded: false,
-}
+// Mock service modules (one per DB/AWS operation)
+jest.mock('../../services/<serviceName>', () => ({
+  <functionName>: jest.fn(),
+}))
 
-describe('Unit test for app handler', function () {
+import { <functionName> } from '../../services/<serviceName>'
+
+const mockEvent = (body: unknown): any => ({
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+  isBase64Encoded: false,
+})
+
+describe('<LambdaName>', () => {
   beforeAll(() => {
     jest.clearAllMocks()
     process.env.DB_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123456789:secret:dev'
-    // Add other required env vars here
+    // other env vars from confirmed contracts
   })
 
-  it('should respond with 201 when everything is successful', async () => {
-    const result: APIGatewayProxyStructuredResultV2 = await lambdaHandler(mockEvent)
-    expect(result.statusCode).toBe(201)
-  })
+  // one it() per confirmed scenario — success and error cases
 })
 ```
-
-Fill in the actual env vars and a valid sample body.
 
 ---
 
@@ -281,14 +316,101 @@ Show the user the exact YAML block to add and its location in `template.yaml` be
 
 ---
 
-## Step 5 — Summary
+## Step 5 — Generate OpenAPI documentation
+
+After `template.yaml` is confirmed and written, create `docs/<lambdaName>.yaml` at the project root.
+
+Derive everything from the already-confirmed contracts (Step 1b) and the API path (Step 4) — no new questions.
+
+### Rules
+
+- One file per lambda. Never read or modify existing files in `docs/`.
+- Check if `docs/` exists; create it if not.
+- Use OpenAPI 3.0.3.
+- Because this API always returns HTTP 200 (even for errors), document a single `"200"` response using `oneOf` with the success shape and the error shape.
+- Map each errorCode to a human-readable description in the error schema's `enum`/`description`.
+
+### Template
+
+```yaml
+openapi: 3.0.3
+info:
+  title: <LambdaName>
+  version: 1.0.0
+
+paths:
+  /api/{entity}/{action}:           # exact path from Step 4
+    <method>:                       # get | post | delete | patch
+      summary: <one-line description from scenarios>
+      requestBody:                  # omit entirely for GET/DELETE with no body
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: >
+            Always HTTP 200. Check `errorCode` field to distinguish success from error.
+            Absent `errorCode` means success.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - <required fields>
+      properties:
+        <field>:
+          type: <string|number|boolean>
+          # repeat per field
+
+    SuccessResponse:
+      type: object
+      properties:
+        # success fields derived from scenarios (e.g. userId, message)
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error
+            703 – auth error
+            705 – not found
+            708 – generic error
+            709 – duplicate
+          enum: [702, 703, 705, 708, 709]   # only codes actually used by this lambda
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
+```
+
+Fill every placeholder from confirmed contracts. Only include in `errorCode.enum` the codes that appear in the confirmed error scenarios.
+
+---
+
+## Step 6 — Summary
 
 After all files are created, print:
 
 ```
 Lambda `<LambdaName>` created:
   lambdas/<LambdaName>/       ← all source files
-  template.yaml               ← resource block added (pending confirmation)
+  template.yaml               ← resource block added
+  docs/<lambdaName>.yaml      ← OpenAPI 3.0 spec
 
 Next steps:
   cd lambdas/<LambdaName> && npm test    ← compile + unit test
