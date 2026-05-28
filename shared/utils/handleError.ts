@@ -1,6 +1,15 @@
 import crypto from 'crypto'
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
-import { AuthError, DuplicatedError, NotFoundError, ValidationError } from '../constants/errors'
+import {
+  AuthError,
+  DuplicatedError,
+  ForbiddenError,
+  MethodNotAllowedError,
+  NotFoundError,
+  RateLimitError,
+  TokenExpiredError,
+  ValidationError,
+} from '../constants/errors'
 
 const HEADERS = { 'Content-Type': 'application/json' } as const
 
@@ -19,11 +28,23 @@ export function handleError(error: unknown): APIGatewayProxyStructuredResultV2 {
     case error instanceof AuthError:
       errorCode = 703
       break
+    case error instanceof ForbiddenError:
+      errorCode = 704
+      break
     case error instanceof NotFoundError:
       errorCode = 705
       break
+    case error instanceof MethodNotAllowedError:
+      errorCode = 706
+      break
+    case error instanceof RateLimitError:
+      errorCode = 707
+      break
     case error instanceof DuplicatedError:
       errorCode = 709
+      break
+    case error instanceof TokenExpiredError:
+      errorCode = 710
       break
     default:
       errorCode = 708

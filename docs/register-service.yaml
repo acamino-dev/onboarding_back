@@ -1,0 +1,93 @@
+openapi: 3.0.3
+info:
+  title: register-service
+  version: 1.0.0
+  description: >
+    Validates an employee against HR data and creates a user account.
+    The employee must exist and be active, belong to the given company/tenant,
+    and have no existing user account. RFC is cross-checked against the HR record.
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user account for an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: >
+            Always HTTP 200. Check `errorCode` field to distinguish success from error.
+            Absent `errorCode` means success.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - employee_number
+        - rfc
+        - company_id
+        - tenant_id
+        - password
+      properties:
+        employee_number:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: HR employee number
+        rfc:
+          type: string
+          minLength: 13
+          maxLength: 13
+          description: Mexican tax ID (RFC) — must match the employee record exactly (case-insensitive)
+        company_id:
+          type: string
+          format: uuid
+          description: UUID of the company the employee belongs to
+        tenant_id:
+          type: string
+          format: uuid
+          description: UUID of the tenant that owns this company
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          description: Plain-text password — hashed with bcrypt (10 rounds) before storage
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Account created successfully
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – bad request (empty body, invalid JSON, missing/invalid fields, RFC mismatch)
+            705 – not found (company or employee does not exist, or employee is inactive)
+            708 – internal server error (unexpected DB or infrastructure failure)
+            709 – conflict (a user account already exists for this employee)
+          enum: [702, 705, 708, 709]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
+          example: a3f1c20b

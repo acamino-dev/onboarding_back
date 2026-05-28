@@ -17,7 +17,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 |---|---|
 | `shared/db/client.ts` | Drizzle client — memoized per container (Pool max=1) |
 | `shared/db/schema.ts` | All table definitions: `companies`, `employees`, `users`, `passwordResetTokens` |
-| `shared/constants/errors.ts` | `ValidationError`, `NotFoundError`, `DuplicatedError`, `AuthError` |
+| `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
 | `shared/utils/handleError.ts` | Maps errors → real HTTP status + `{ errorCode, errorId }` response |
 | `shared/utils/secrets.ts` | Secrets Manager with in-memory cache — `getSecret(arn)` |
@@ -28,7 +28,17 @@ Errors always return HTTP 200 with:
 ```json
 { "errorCode": <internalStatusCode>, "errorId": "<8-hex traceId>" }
 ```
-`errorCode` values: `702` validation · `703` auth · `705` not found · `708` generic · `709` duplicate
+`errorCode` values:
+- `701` success (no error)
+- `702` bad request (ValidationError)
+- `703` unauthorized (AuthError)
+- `704` forbidden (ForbiddenError)
+- `705` not found (NotFoundError)
+- `706` method not allowed (MethodNotAllowedError)
+- `707` too many requests (RateLimitError)
+- `708` internal server error (generic Error)
+- `709` conflict (DuplicatedError)
+- `710` accessToken expired (TokenExpiredError)
 
 Success responses use standard HTTP status codes (`201`, `200`, etc.) with a plain body.
 
