@@ -107,13 +107,13 @@ import { createResponse } from '../../shared/utils/createResponse'
 import { handleError } from '../../shared/utils/handleError'
 import { validateBody } from './utils/validators'
 
-const DB_SECRET_ARN = process.env.DB_SECRET_ARN
-if (!DB_SECRET_ARN) throw new Error('DB_SECRET_ARN is not set')
-
 export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   try {
+    const DB_SECRET_ARN = process.env.DB_SECRET_ARN
+    if (!DB_SECRET_ARN) throw new Error('DB_SECRET_ARN is not set')
+
     const body = validateBody(event.body ?? '')
 
     // --- business logic ---
@@ -125,7 +125,7 @@ export const lambdaHandler = async (
 }
 ```
 
-Replace env var guards with whatever vars the lambda actually needs.
+Replace env var guards with whatever vars the lambda actually needs. Always read env vars **inside** the handler — never at module level. Module-level reads execute at import time, before Jest's `beforeAll` can set them, breaking every generated test.
 
 ---
 
@@ -411,18 +411,45 @@ Fill every placeholder from confirmed contracts. Only include in `errorCode.enum
 
 ---
 
-## Step 6 — Summary
+## Step 6 — Run tests and fix until green
 
-After all files are created, print:
+**GOAL: all tests in `tests/unit/app.test.ts` must pass before proceeding to the summary. Do not report success until `npm test` exits with code 0.**
+
+Run:
+
+```bash
+cd lambdas/<LambdaName> && npm test
+```
+
+If any test fails:
+1. Read the full error output
+2. Identify which file causes the failure (`app.ts`, `validators.ts`, a service file, or the test itself if the mock is wrong)
+3. Fix the minimal change needed — do not alter test assertions unless the scenario contract (Step 1b) was misread
+4. Re-run `npm test`
+5. Repeat until green
+
+Common failure causes and fixes:
+- `DB_SECRET_ARN is not set` → env var read is at module level; move inside handler (see `app.ts` template)
+- Mock returns wrong shape → update `mockResolvedValue` in the test to match the actual return type of the service
+- `ValidationError` not thrown for missing fields → add required field to Zod schema in `validators.ts`
+- Type error on compile → fix the TS type mismatch in the flagged file
+
+Only proceed to Step 7 once `npm test` reports all tests passing.
+
+---
+
+## Step 7 — Summary
+
+After all files are created and tests are green, print:
 
 ```
 Lambda `<LambdaName>` created:
   lambdas/<LambdaName>/       ← all source files
   template.yaml               ← resource block added
   docs/<lambdaName>.yaml      ← OpenAPI 3.0 spec
+  tests: ✓ all passing
 
 Next steps:
-  cd lambdas/<LambdaName> && npm test    ← compile + unit test
   pnpm build                             ← sam build
 ```
 

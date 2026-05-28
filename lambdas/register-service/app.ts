@@ -8,13 +8,13 @@ import { createUser } from './services/createUser'
 import { findEmployee } from './services/findEmployee'
 import { validateBody } from './utils/validators'
 
-const DB_SECRET_ARN = process.env.DB_SECRET_ARN
-if (!DB_SECRET_ARN) throw new Error('DB_SECRET_ARN is not set')
-
 export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   try {
+    const DB_SECRET_ARN = process.env.DB_SECRET_ARN
+    if (!DB_SECRET_ARN) throw new Error('DB_SECRET_ARN is not set')
+
     const body = validateBody(event.body ?? '')
 
     const secret = await getSecret(DB_SECRET_ARN)
