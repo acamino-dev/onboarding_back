@@ -1,0 +1,70 @@
+graph TD
+
+    subgraph SCREENS["Screens · React"]
+        S_LOGIN["Login"]
+        S_REGISTER["Create Account"]
+        S_RECOVERY["Recover Password"]
+        S_OTP["OTP Code"]
+        S_ERROR["Error — Employee not found"]
+    end
+
+    subgraph API_LAYER["API Layer"]
+        APIGW["API Gateway · HTTP API v2"]
+        AUTHORIZER["Lambda Authorizer · JWT Validation"]
+    end
+
+    subgraph SERVICES["Microservices · AWS Lambda"]
+        AUTH_SVC["auth-service POST /auth/login Validates credentials · issues JWT + Refresh Token"]
+        REG_SVC["register-service POST /auth/register Validates employee_number + RFC + company Creates user if employee exists"]
+        OTP_SVC["otp-service POST /auth/otp/send Generates OTP · persists with TTL · sends email"]
+        OTP_VRF["otp-verify-service POST /auth/otp/verify Validates received OTP code"]
+        REC_SVC["password-recovery-service POST /auth/recovery Generates temp token · sends link via email"]
+        RST_SVC["password-reset-service POST /auth/reset Updates password with valid token"]
+    end
+
+    subgraph RDS["RDS Aurora PostgreSQL · RLS via tenant_id"]
+        TB_USERS[(users)]
+        TB_EMPLOYEES[(employees)]
+        TB_COMPANIES[(companies)]
+        TB_RESETS[(password_reset_tokens)]
+    end
+
+    subgraph DYNAMO["DynamoDB · On-Demand"]
+        TB_OTP[(otp-codes · TTL)]
+        TB_REFRESH[(refresh-tokens · TTL)]
+    end
+
+    SES_D["AWS SES · Email"]
+
+    S_LOGIN -->|POST /auth/login| APIGW
+    S_REGISTER -->|POST /auth/register| APIGW
+    S_RECOVERY -->|POST /auth/recovery| APIGW
+    S_OTP -->|POST /auth/otp/verify| APIGW
+
+    APIGW -.->|protected routes| AUTHORIZER
+    AUTHORIZER -.->|valid token| APIGW
+
+    APIGW --> AUTH_SVC
+    APIGW --> REG_SVC
+    APIGW --> OTP_SVC
+    APIGW --> OTP_VRF
+    APIGW --> REC_SVC
+    APIGW --> RST_SVC
+
+    AUTH_SVC --> TB_USERS
+    REG_SVC --> TB_EMPLOYEES
+    REG_SVC --> TB_USERS
+    REG_SVC --> TB_COMPANIES
+    REC_SVC --> TB_USERS
+    REC_SVC --> TB_RESETS
+    RST_SVC --> TB_USERS
+    RST_SVC --> TB_RESETS
+
+    AUTH_SVC --> TB_REFRESH
+    OTP_SVC --> TB_OTP
+    OTP_VRF --> TB_OTP
+
+    OTP_SVC --> SES_D
+    REC_SVC --> SES_D
+
+    REG_SVC -->|employee_number not found| S_ERROR

@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: onboarding-back - Auth module
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures:
+      - arm64
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        NODE_OPTIONS: --enable-source-maps
+    VpcConfig:
+      SecurityGroupIds: !Split [',', !Ref LambdaSecurityGroupIds]
+      SubnetIds: !Split [',', !Ref LambdaSubnetIds]
+
+Parameters:
+  LambdaSubnetIds:
+    Type: String
+    Description: Comma-separated list of private subnet IDs for Lambda VPC config
+  LambdaSecurityGroupIds:
+    Type: String
+    Description: Comma-separated list of security group IDs for Lambda VPC config
+  DbSecretArn:
+    Type: String
+    Description: ARN of the Secrets Manager secret containing DB connection string
+
+Resources:
+  AuthApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        AllowMethods:
+          - POST
+          - OPTIONS
+
+  RegisterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: register-service
+      CodeUri: lambdas/register-service/
+      Handler: app.lambdaHandler
+      Description: POST /auth/register - validates employee record and creates user account
+      Environment:
+        Variables:
+          DB_SECRET_ARN: !Ref DbSecretArn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref DbSecretArn
+        - VPCAccessPolicy: {}
+      Events:
+        Register:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Path: /auth/register
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - app.ts
+        External:
+          - '@aws-sdk/*'
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com'
+  RegisterFunctionArn:
+    Description: Register Lambda ARN
+    Value: !GetAtt RegisterFunction.Arn

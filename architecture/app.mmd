@@ -1,0 +1,86 @@
+graph TD
+
+    subgraph APP_SCREENS["Screens · React"]
+        APP_S_CREDIT["Credit Request credit · Active credit info · Amortization table"]
+        APP_S_FAQ["FAQ & Support Static FAQ · Submit support ticket"]
+        APP_S_ACCOUNT["Account Management Profile · Password · Email · Preferences · Logout"]
+    end
+
+    subgraph API_LAYER["API Layer"]
+        APIGW["API Gateway · HTTP API v2"]
+        AUTHORIZER["Lambda Authorizer · JWT Validation"]
+    end
+
+    subgraph APP_SERVICES["Microservices · AWS Lambda"]
+        CREDIT_PROFILE["credit-profile-service POST /credit/profile Checks pre-approval status · orchestrates core fetch + analysis Returns pre-approved amount if valid · triggers re-evaluation if expired"]
+        CREDIT_ANALYSIS["credit-analysis-service Internal · invoked by credit-profile-service Configurable algorithm · evaluates core credit history Saves pre-approved amount · enforces cooldown (default 30d)"]
+        ACTIVE_CREDIT["active-credit-service POST /credit/active Fetches active credit from core · enriches with credit_events Calculates amortization table on demand"]
+        CORE_INTEGRATION["core-integration-service Internal · Lambda Container (ECR + Playwright) Scrapes core portal for credit history Result cached in DynamoDB · TTL 5min"]
+        SUPPORT_TICKET["support-ticket-service POST /support/ticket Sends email to support area via SES · MVP · no DB storage"]
+        ACCOUNT_SVC["account-service POST /account/profile · POST /account/update-password POST /account/update-email (reuses otp-service from Auth Module) POST /account/preferences"]
+        LOGOUT_SVC["logout-service POST /auth/logout Deletes refresh token from DynamoDB · invalidates session"]
+    end
+
+    subgraph RDS["RDS Aurora PostgreSQL · RLS via tenant_id"]
+        TB_USERS[(users)]
+        TB_PRODUCTS[(credit_products)]
+        TB_PREAPPROVALS[(credit_preapprovals)]
+        TB_CREDITS[(credits)]
+        TB_EVENTS[(credit_events)]
+        TB_PREFS[(user_preferences)]
+    end
+
+    subgraph DYNAMO["DynamoDB · On-Demand"]
+        TB_REFRESH[(refresh-tokens · TTL)]
+        TB_CORE_CACHE[(core-profile-cache · TTL 5min)]
+    end
+
+    SES_D["AWS SES · Email"]
+    CORE["External Core Portal Playwright · Browser Headless"]
+
+    %% Screens → API Gateway
+    APP_S_CREDIT -->|POST /credit/profile| APIGW
+    APP_S_CREDIT -->|POST /credit/active| APIGW
+    APP_S_FAQ -->|POST /support/ticket| APIGW
+    APP_S_ACCOUNT -->|POST /account/*| APIGW
+    APP_S_ACCOUNT -->|POST /auth/logout| APIGW
+
+    %% Lambda Authorizer
+    APIGW -.->|all routes protected| AUTHORIZER
+    AUTHORIZER -.->|valid token| APIGW
+
+    %% API Gateway → Services
+    APIGW --> CREDIT_PROFILE
+    APIGW --> ACTIVE_CREDIT
+    APIGW --> SUPPORT_TICKET
+    APIGW --> ACCOUNT_SVC
+    APIGW --> LOGOUT_SVC
+
+    %% credit-profile-service orchestration (Lambda-to-Lambda)
+    CREDIT_PROFILE -.->|invoke| CORE_INTEGRATION
+    CREDIT_PROFILE -.->|invoke if re-evaluation needed| CREDIT_ANALYSIS
+    CREDIT_PROFILE --> TB_PREAPPROVALS
+
+    %% credit-analysis-service
+    CREDIT_ANALYSIS --> TB_PREAPPROVALS
+    CREDIT_ANALYSIS --> TB_PRODUCTS
+
+    %% active-credit-service
+    ACTIVE_CREDIT -.->|invoke| CORE_INTEGRATION
+    ACTIVE_CREDIT --> TB_CREDITS
+    ACTIVE_CREDIT --> TB_EVENTS
+
+    %% core-integration-service
+    CORE_INTEGRATION --> CORE
+    CORE_INTEGRATION --> TB_CORE_CACHE
+
+    %% support-ticket-service
+    SUPPORT_TICKET --> SES_D
+
+    %% account-service
+    ACCOUNT_SVC --> TB_USERS
+    ACCOUNT_SVC --> TB_PREFS
+    ACCOUNT_SVC -.->|invoke · email change OTP| AUTH_OTP["otp-service (Auth Module)"]
+
+    %% logout-service
+    LOGOUT_SVC --> TB_REFRESH
