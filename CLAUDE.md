@@ -19,16 +19,16 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | `shared/db/schema.ts` | All table definitions: `companies`, `employees`, `users`, `passwordResetTokens` |
 | `shared/constants/errors.ts` | `ValidationError`, `NotFoundError`, `DuplicatedError`, `AuthError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
-| `shared/utils/handleError.ts` | Maps errors → `polaris`/`neptune` response (always HTTP 200 for errors) |
+| `shared/utils/handleError.ts` | Maps errors → real HTTP status + `{ errorCode, errorId }` response |
 | `shared/utils/secrets.ts` | Secrets Manager with in-memory cache — `getSecret(arn)` |
 
 ## Error response format
 
 Errors always return HTTP 200 with:
 ```json
-{ "polaris": <internalStatusCode>, "neptune": "<8-hex errorId>" }
+{ "errorCode": <internalStatusCode>, "errorId": "<8-hex traceId>" }
 ```
-`polaris` codes: `702` validation · `703` auth · `705` not found · `708` generic · `709` duplicate
+`errorCode` values: `702` validation · `703` auth · `705` not found · `708` generic · `709` duplicate
 
 Success responses use standard HTTP status codes (`201`, `200`, etc.) with a plain body.
 
