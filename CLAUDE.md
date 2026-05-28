@@ -61,6 +61,20 @@ pnpm deploy         # sam deploy --guided
 cd lambdas/<name> && npm test   # compile + unit tests for one lambda
 ```
 
+## Testing conventions
+
+Every lambda test suite (`tests/unit/app.test.ts`) must cover these cases in addition to its business-logic scenarios:
+
+| Case | Expected errorCode |
+|---|---|
+| `DB_SECRET_ARN` env var not set | `708` |
+| `getSecret` throws (Secrets Manager unavailable) | `708` |
+| Each service function throws a generic DB error | `708` |
+
+**Pattern** — use `beforeEach` (not `beforeAll`) to reset mocks and env vars. Always mock `shared/utils/secrets` in addition to service modules. Each service's DB error test simulates the wrapped error the service already produces: `new Error('Error on <fn>: ...')`.
+
+The 708 cases are infrastructure-level and apply to every lambda by design. They are generated automatically by `/new-lambda` and must be preserved when tests are modified manually.
+
 ## Creating a new lambda
 
 Use `/new-lambda` — the skill handles scaffolding, template.yaml registration, and enforces all conventions.
