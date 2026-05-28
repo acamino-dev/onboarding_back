@@ -1,0 +1,63 @@
+flowchart TD
+
+    START([Express Credit Request]) --> BL
+
+    %% Hard Stops
+    BL{Blacklisted?}
+    BL -- Yes --> R1([REJECTED - Internal blacklist])
+    BL -- No --> VEN
+
+    VEN{Active overdue credit?}
+    VEN -- Yes --> R2([REJECTED - Active overdue debt])
+    VEN -- No --> HIST
+
+    %% Segmentation
+    HIST{Has internal credit history?}
+
+    %% New client path
+    HIST -- No --> L4_NEW([APPROVED - Level 4 - New Client - Amount 2000 - Rate 12pct mo - Term 6mo])
+
+    %% Existing client path
+    HIST -- Yes --> SCORE_CALC
+
+    subgraph SCORING["Score Calculation - Max 25 pts"]
+        SCORE_CALC[Start evaluation]
+
+        SC1[Credits paid off: 1=3pts, 2=7pts, 3 or more=12pts]
+        SC2[Max prior credit amount: under 5k=1pt, 5k-15k=3pts, over 15k=5pts]
+
+        SC3_TIME[Platform time active: under 3m=0, 3-6m=1, 6-12m=2, 12m plus=3pts]
+        SC3_FREQ[Transaction frequency per month: under 5=0, 5-15=1, over 15=2pts]
+        SC3_PROD[Products contracted: 1=0pts, 2 or more=1pt]
+        SC3_VOL[Transaction volume: low=0, mid=1, high=2pts]
+
+        SCORE_CALC --> SC1
+        SCORE_CALC --> SC2
+        SCORE_CALC --> SC3_TIME
+        SCORE_CALC --> SC3_FREQ
+        SCORE_CALC --> SC3_PROD
+        SCORE_CALC --> SC3_VOL
+
+        SC1 & SC2 & SC3_TIME & SC3_FREQ & SC3_PROD & SC3_VOL --> SCORE_TOTAL[Total score: sum of all variables]
+    end
+
+    SCORE_TOTAL --> NIVEL
+
+    %% Risk level decision
+    NIVEL{Total score}
+    NIVEL -- "19 to 25 pts" --> CALC_L1
+    NIVEL -- "12 to 18 pts" --> CALC_L2
+    NIVEL -- "6 to 11 pts"  --> CALC_L3
+    NIVEL -- "0 to 5 pts"   --> CALC_L4
+
+    %% Amount calculation per level: floor = prev_credit x multiplier, capped at level max and 35000
+    CALC_L1["Level 1: floor = prev_credit x 1.30, cap = 35000"]
+    CALC_L2["Level 2: floor = prev_credit x 1.20, cap = 20000"]
+    CALC_L3["Level 3: floor = prev_credit x 1.10, cap = 10000"]
+    CALC_L4["Level 4: floor = prev_credit x 1.05, cap = 4000"]
+
+    %% Outcomes
+    CALC_L1 --> L1([APPROVED - Level 1 - Excellent - Rate 3.5pct mo - Term 18mo])
+    CALC_L2 --> L2([APPROVED - Level 2 - Good - Rate 5.5pct mo - Term 12mo])
+    CALC_L3 --> L3([APPROVED - Level 3 - Regular - Rate 8pct mo - Term 9mo])
+    CALC_L4 --> L4([APPROVED - Level 4 - Risky - Rate 12pct mo - Term 6mo])

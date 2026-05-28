@@ -1,0 +1,8 @@
+packages:
+  - lambdas/*
+
+allowBuilds:
+  bcrypt: true
+
+onlyBuiltDependencies:
+  - bcrypt

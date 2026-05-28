@@ -1,0 +1,175 @@
+graph TD
+
+    subgraph KYC_SCREENS["Screens · React"]
+        KYC_ENTRY["Module Entry · Progress Recovery POST /kyc/start · checks pre-approval · resumes at current_step or starts new session"]
+        KYC_S1["INE Front Capture or upload photo · Textract OCR · retry if not legible"]
+        KYC_S2["INE Back Capture or upload photo · Textract OCR · retry if not legible"]
+        KYC_S3["Proof of Address Upload document · Textract OCR (name, address, date, issuer) · retry if not legible"]
+        KYC_S4["CURP Upload document · Textract OCR · retry if not legible"]
+        KYC_S5["Bank Statement Upload document · Textract OCR (CLABE, bank, account holder) · retry if not legible"]
+        KYC_S6["Data Review Confirm or edit all OCR extracted data before proceeding"]
+        KYC_S7["Biometric Validation Legalario SDK · liveness detection + INE authenticity"]
+        KYC_S8["Contract — Signature Pending Polling status · waiting for user to sign via Legalario"]
+        KYC_S9["Disbursement in Process Contract signed · manual disbursement initiated · polling status"]
+        KYC_S10["Credit Disbursed Funds confirmed · credit is now active"]
+    end
+
+    subgraph API_LAYER["API Layer"]
+        APIGW["API Gateway · HTTP API v2 · JWT protected"]
+        AUTHORIZER["Lambda Authorizer · JWT Validation"]
+        APIGW_PUB["API Gateway · Public Routes /webhooks/* · HMAC signature validation per provider"]
+    end
+
+    subgraph KYC_SERVICES["Microservices · AWS Lambda"]
+        KYC_GATE["kyc-gate-service POST /kyc/start Validates pre-approval is valid · creates or resumes kyc_application · returns current_step for frontend routing"]
+        KYC_STATUS["kyc-status-service POST /kyc/status Returns current application status · used for polling during biometric and contract async steps"]
+        DOC_UPLOAD["document-upload-service POST /kyc/documents/upload-url Generates S3 pre-signed URL · frontend uploads image directly to S3"]
+        DOC_OCR["document-ocr-service POST /kyc/documents/ocr Calls Textract on S3 object · validates readability threshold · stores OCR data in kyc_documents"]
+        INE_VAL["ine-validation-service POST /kyc/documents/validate-ine Check digit · expiry date · CURP consistency · cross-check with user BD data · Legalario Lista Nominal"]
+        CURP_VAL["curp-validation-service POST /kyc/documents/validate-curp Legalario RENAPO validation · cross-check match with INE extracted data"]
+        KYC_REVIEW["kyc-review-service POST /kyc/review/confirm Persists confirmed or user-edited OCR data · invokes fraud-detection-service before advancing"]
+        FRAUD_CHECK["fraud-detection-service Internal · invoked by kyc-review-service Secondary decision engine · analyzes confirmed KYC data for fraud indicators Advances to BIOMETRIC_PENDING or sets status FRAUD_REJECTED"]
+        BIO_INIT["biometric-initiate-service POST /kyc/biometric/start Creates Legalario biometric session · stores session id · returns SDK token to frontend"]
+        LEGALARIO_WH["legalario-webhook-service POST /webhooks/legalario Public · HMAC validated · handles biometric result and contract state change events · triggers contract generation · invokes disbursement-record-service on contract signed"]
+        DISBURSE_RECORD["disbursement-record-service Internal · invoked by legalario-webhook-service on contract signed Creates disbursement record in BD · updates status to CONTRACT_SIGNED · sends pending disbursement email to operations team"]
+        DISBURSE["disbursement-service POST /admin/credits/:id/disburse API key protected · marks disbursement as initiated · invokes disbursement-status-hook · STP integration hook (future)"]
+        DISBURSE_HOOK["disbursement-status-hook POST /webhooks/disbursement Public · receives STP transfer confirmation (future) · updates credit status to DISBURSED · notifies user via SES Also invoked directly by disbursement-service for manual confirmation flow"]
+        KYC_ANALYTICS["kyc-analytics-service POST /kyc/analytics/event Dedicated telemetry service · receives events from frontend and backend Tracks step durations · abandonment · OCR failures · camera errors · retries · technical errors · fraud flags · session timeouts"]
+    end
+
+    subgraph RDS["RDS Aurora PostgreSQL · RLS via tenant_id"]
+        TB_KYC_APPS[(kyc_applications)]
+        TB_KYC_DOCS[(kyc_documents)]
+        TB_KYC_DATA[(kyc_confirmed_data)]
+        TB_KYC_BIO[(kyc_biometrics)]
+        TB_CONTRACTS[(contracts)]
+        TB_PREAPPROVALS[(credit_preapprovals)]
+        TB_DISBURSE_QUEUE[(disbursement_queue)]
+        TB_FRAUD[(fraud_checks)]
+    end
+
+    subgraph DYNAMO["DynamoDB · On-Demand"]
+        TB_KYC_EVENTS[("kyc_events · PK: application_id · SK: timestamp#event_type step · event_type · metadata_json · user_id · tenant_id Event types: step_started · step_completed · step_abandoned session_resumed · session_timeout · ocr_attempt ocr_success · ocr_failure · camera_error · ocr_retry validation_error · technical_error · fraud_flagged")]
+    end
+
+    S3_DOCS["S3 · kyc-documents SSE-KMS · IAM restricted"]
+    TEXTRACT["AWS Textract OCR Engine"]
+    LEGALARIO["Legalario API INE Lista Nominal · RENAPO · Biometric · E-sign NOM-151"]
+    SES_D["AWS SES · Email"]
+
+    %% Module entry → API Gateway
+    KYC_ENTRY -->|POST /kyc/start| APIGW
+    KYC_GATE -.->|returns current_step · frontend routes to correct screen| KYC_ENTRY
+
+    %% Document screens → API Gateway
+    KYC_S1 -->|POST /kyc/documents/upload-url| APIGW
+    KYC_S1 -->|POST /kyc/documents/ocr| APIGW
+    KYC_S1 -->|POST /kyc/documents/validate-ine| APIGW
+    KYC_S2 -->|POST /kyc/documents/upload-url| APIGW
+    KYC_S2 -->|POST /kyc/documents/ocr| APIGW
+    KYC_S2 -->|POST /kyc/documents/validate-ine| APIGW
+    KYC_S3 -->|POST /kyc/documents/upload-url| APIGW
+    KYC_S3 -->|POST /kyc/documents/ocr| APIGW
+    KYC_S4 -->|POST /kyc/documents/upload-url| APIGW
+    KYC_S4 -->|POST /kyc/documents/ocr| APIGW
+    KYC_S4 -->|POST /kyc/documents/validate-curp| APIGW
+    KYC_S5 -->|POST /kyc/documents/upload-url| APIGW
+    KYC_S5 -->|POST /kyc/documents/ocr| APIGW
+    KYC_S6 -->|POST /kyc/review/confirm| APIGW
+    KYC_S7 -->|POST /kyc/biometric/start| APIGW
+    KYC_S7 -->|POST /kyc/status| APIGW
+    KYC_S8 -->|POST /kyc/status| APIGW
+    KYC_S9 -->|POST /kyc/status| APIGW
+
+    %% Frontend analytics events (step lifecycle · camera errors · retries)
+    KYC_SCREENS -->|POST /kyc/analytics/event · fire and forget| APIGW
+
+    %% Lambda Authorizer
+    APIGW -.->|all routes protected| AUTHORIZER
+    AUTHORIZER -.->|valid token| APIGW
+
+    %% API Gateway → Services
+    APIGW --> KYC_GATE
+    APIGW --> KYC_STATUS
+    APIGW --> DOC_UPLOAD
+    APIGW --> DOC_OCR
+    APIGW --> INE_VAL
+    APIGW --> CURP_VAL
+    APIGW --> KYC_REVIEW
+    APIGW --> BIO_INIT
+    APIGW --> KYC_ANALYTICS
+
+    %% Public webhook routes
+    APIGW_PUB --> LEGALARIO_WH
+    APIGW_PUB --> DISBURSE_HOOK
+
+    %% kyc-gate-service
+    KYC_GATE --> TB_KYC_APPS
+    KYC_GATE --> TB_PREAPPROVALS
+    KYC_GATE -.->|session_timeout event| KYC_ANALYTICS
+
+    %% kyc-status-service
+    KYC_STATUS --> TB_KYC_APPS
+    KYC_STATUS --> TB_KYC_BIO
+    KYC_STATUS --> TB_CONTRACTS
+
+    %% document-upload-service
+    DOC_UPLOAD --> S3_DOCS
+
+    %% document-ocr-service
+    DOC_OCR --> TEXTRACT
+    DOC_OCR --> TB_KYC_DOCS
+    DOC_OCR -.->|ocr_attempt · ocr_success · ocr_failure · technical_error| KYC_ANALYTICS
+
+    %% ine-validation-service
+    INE_VAL --> TB_KYC_DOCS
+    INE_VAL -.->|Lista Nominal validation| LEGALARIO
+    INE_VAL -.->|validation_error · technical_error| KYC_ANALYTICS
+
+    %% curp-validation-service
+    CURP_VAL --> TB_KYC_DOCS
+    CURP_VAL -.->|RENAPO validation| LEGALARIO
+    CURP_VAL -.->|validation_error · technical_error| KYC_ANALYTICS
+
+    %% kyc-review-service → fraud detection (before BIOMETRIC_PENDING)
+    KYC_REVIEW --> TB_KYC_DATA
+    KYC_REVIEW --> TB_KYC_APPS
+    KYC_REVIEW -.->|invoke · data confirmed| FRAUD_CHECK
+
+    %% fraud-detection-service
+    FRAUD_CHECK --> TB_FRAUD
+    FRAUD_CHECK --> TB_KYC_APPS
+    FRAUD_CHECK -.->|fraud_flagged event| KYC_ANALYTICS
+
+    %% biometric-initiate-service
+    BIO_INIT -.->|create biometric session| LEGALARIO
+    BIO_INIT --> TB_KYC_BIO
+    BIO_INIT --> TB_KYC_APPS
+
+    %% legalario-webhook-service
+    LEGALARIO -.->|webhook · biometric result + contract events| APIGW_PUB
+    LEGALARIO_WH --> TB_KYC_BIO
+    LEGALARIO_WH --> TB_CONTRACTS
+    LEGALARIO_WH --> TB_KYC_APPS
+    LEGALARIO_WH -.->|generate and send contract for signing| LEGALARIO
+    LEGALARIO_WH -.->|invoke · on contract signed| DISBURSE_RECORD
+    LEGALARIO_WH --> SES_D
+
+    %% disbursement-record-service
+    DISBURSE_RECORD --> TB_DISBURSE_QUEUE
+    DISBURSE_RECORD --> TB_KYC_APPS
+    DISBURSE_RECORD --> SES_D
+
+    %% disbursement-service (manual operator trigger)
+    DISBURSE --> TB_DISBURSE_QUEUE
+    DISBURSE --> TB_KYC_APPS
+    DISBURSE -.->|invoke| DISBURSE_HOOK
+
+    %% disbursement-status-hook (manual now · STP webhook future)
+    DISBURSE_HOOK --> TB_KYC_APPS
+    DISBURSE_HOOK --> TB_CONTRACTS
+    DISBURSE_HOOK --> TB_DISBURSE_QUEUE
+    DISBURSE_HOOK --> SES_D
+
+    %% kyc-analytics-service
+    KYC_ANALYTICS --> TB_KYC_EVENTS
