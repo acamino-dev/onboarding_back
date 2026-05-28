@@ -32,7 +32,16 @@ From the stated scenarios, infer and summarize back to the user:
 
 - **Request body fields** and their types (from what inputs are mentioned in the scenarios)
 - **Response shape** on success (from what the success case returns)
-- **Error types used**: map each error code to its class (`702` → `ValidationError`, `703` → `AuthError`, `705` → `NotFoundError`, `708` → generic `Error`, `709` → `DuplicatedError`)
+- **Error types used**: map each error code to its class:
+  - `702` bad request → `ValidationError`
+  - `703` unauthorized → `AuthError`
+  - `704` forbidden → `ForbiddenError`
+  - `705` not found → `NotFoundError`
+  - `706` method not allowed → `MethodNotAllowedError`
+  - `707` too many requests → `RateLimitError`
+  - `708` internal server error → generic `Error`
+  - `709` conflict → `DuplicatedError`
+  - `710` accessToken expired → `TokenExpiredError`
 - **DB/AWS operations implied** (e.g. "look up employee by email", "insert new user row")
 - **Environment variables needed** (e.g. `DB_SECRET_ARN`)
 
@@ -197,7 +206,7 @@ export function handleError(error: unknown): APIGatewayProxyStructuredResultV2 {
 }
 ```
 
-Error codes: `702` validation, `703` auth, `705` not found, `708` generic, `709` duplicate.
+Error codes: `702` bad request · `703` unauthorized · `704` forbidden · `705` not found · `706` method not allowed · `707` too many requests · `708` internal server error · `709` conflict · `710` accessToken expired.
 
 ---
 
