@@ -1,9 +1,6 @@
-import { and, eq } from 'drizzle-orm'
 import { NotFoundError } from '../../../shared/constants/errors'
 import { getDb } from '../../../shared/db/client'
-import { companies, employees } from '../../../shared/db/schema'
-
-type Employee = typeof employees.$inferSelect
+import type { Employee } from '../../../shared/db/types'
 
 export async function findEmployee(
   employeeNumber: string,
@@ -14,26 +11,17 @@ export async function findEmployee(
   try {
     const db = getDb(connectionString)
 
-    const [company] = await db
-      .select({ id: companies.id })
-      .from(companies)
-      .where(and(eq(companies.id, companyId), eq(companies.tenantId, tenantId)))
-      .limit(1)
+    const company = await db.queryOne<{ id: string }>(
+      'SELECT id FROM companies WHERE id = $1 AND tenant_id = $2',
+      [companyId, tenantId]
+    )
 
     if (!company) throw new NotFoundError('Company not found')
 
-    const [employee] = await db
-      .select()
-      .from(employees)
-      .where(
-        and(
-          eq(employees.employeeNumber, employeeNumber),
-          eq(employees.companyId, companyId),
-          eq(employees.tenantId, tenantId),
-          eq(employees.isActive, true)
-        )
-      )
-      .limit(1)
+    const employee = await db.queryOne<Employee>(
+      'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
+      [employeeNumber, companyId, tenantId]
+    )
 
     if (!employee) throw new NotFoundError('Employee not found')
 

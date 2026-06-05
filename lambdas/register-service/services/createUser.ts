@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt'
 import { getDb } from '../../../shared/db/client'
-import { users } from '../../../shared/db/schema'
 import type { RequestBody } from '../types/RequestBody'
 
 type Employee = {
@@ -20,13 +19,10 @@ export async function createUser(
     const db = getDb(connectionString)
     const passwordHash = await bcrypt.hash(body.password, BCRYPT_ROUNDS)
 
-    await db.insert(users).values({
-      employeeId: employee.id,
-      companyId: employee.companyId,
-      tenantId: body.tenant_id,
-      email: employee.email,
-      passwordHash,
-    })
+    await db.query(
+      'INSERT INTO users (employee_id, company_id, tenant_id, email, password_hash) VALUES ($1, $2, $3, $4, $5)',
+      [employee.id, employee.companyId, body.tenant_id, employee.email, passwordHash]
+    )
   } catch (e) {
     throw new Error(`Error on createUser: ${e}`)
   }

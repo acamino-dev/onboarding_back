@@ -17,7 +17,7 @@ describe('findEmployee integration', () => {
     expect(employee.id).toBe(EMPLOYEES.active.id)
     expect(employee.rfc).toBe(EMPLOYEES.active.rfc)
     expect(employee.email).toBe(EMPLOYEES.active.email)
-    expect(employee.isActive).toBe(true)
+    expect(employee.is_active).toBe(true)
   })
 
   it('throws NotFoundError when company does not exist', async () => {

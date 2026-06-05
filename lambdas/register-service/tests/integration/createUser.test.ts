@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt'
-import { eq } from 'drizzle-orm'
-import { users } from '../../../../shared/db/schema'
+import type { User } from '../../../../shared/db/types'
 import { createUser } from '../../services/createUser'
 import { EMPLOYEES, TEST_COMPANY_ID, TEST_TENANT_ID } from './helpers/constants'
 import { getTestDb } from './helpers/db'
@@ -23,19 +22,19 @@ const testBody = {
 
 describe('createUser integration', () => {
   afterEach(async () => {
-    await db.delete(users).where(eq(users.employeeId, EMPLOYEES.forCreate.id))
+    await db.query('DELETE FROM users WHERE employee_id = $1', [EMPLOYEES.forCreate.id])
   })
 
   it('inserts a user row with a valid bcrypt password hash', async () => {
     await createUser(testEmployee, testBody, connectionString)
 
-    const [inserted] = await db.select().from(users).where(eq(users.employeeId, EMPLOYEES.forCreate.id))
+    const inserted = await db.queryOne<User>('SELECT * FROM users WHERE employee_id = $1', [EMPLOYEES.forCreate.id])
 
     expect(inserted).toBeDefined()
-    expect(inserted.email).toBe(EMPLOYEES.forCreate.email)
-    expect(inserted.tenantId).toBe(TEST_TENANT_ID)
-    expect(inserted.companyId).toBe(TEST_COMPANY_ID)
-    expect(await bcrypt.compare('IntegrationPass123!', inserted.passwordHash)).toBe(true)
+    expect(inserted?.email).toBe(EMPLOYEES.forCreate.email)
+    expect(inserted?.tenant_id).toBe(TEST_TENANT_ID)
+    expect(inserted?.company_id).toBe(TEST_COMPANY_ID)
+    expect(await bcrypt.compare('IntegrationPass123!', inserted?.password_hash || '')).toBe(true)
   })
 
   it('throws a wrapped Error when employeeId violates the FK constraint', async () => {
