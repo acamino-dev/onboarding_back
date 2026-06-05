@@ -7,7 +7,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | Layer | Technology |
 |---|---|
 | Runtime | Node 22, TypeScript (strict) |
-| ORM | Drizzle + `pg` (PostgreSQL) |
+| Database | Raw SQL + `pg` (PostgreSQL) |
 | Validation | Zod |
 | Auth | bcrypt |
 | Infra | AWS SAM (API Gateway v2 HTTP API) |
@@ -33,8 +33,9 @@ onboarding-back/
 ├── shared/
 │   ├── constants/errors.ts  # ValidationError, NotFoundError, DuplicatedError, AuthError
 │   ├── db/
-│   │   ├── client.ts        # Drizzle client — memoized per container (Pool max=1)
-│   │   └── schema.ts        # companies, employees, users, passwordResetTokens
+│   │   ├── client.ts        # Raw SQL client with query() and queryOne() — memoized per container (Pool max=1)
+│   │   ├── types.ts         # Company, Employee, User, PasswordResetToken types
+│   │   └── migrate.ts       # Migration runner
 │   └── utils/
 │       ├── createResponse.ts
 │       ├── handleError.ts
@@ -56,14 +57,14 @@ cd lambdas/<name> && npm test       # compile + unit tests for one lambda
 
 ## Database schema
 
-Four tables, all in PostgreSQL:
+Four tables, all in PostgreSQL (schema in `migrations/001_initial_schema.sql`):
 
 - **companies** — `id`, `name`, `tenant_id`, `created_at`
 - **employees** — `id`, `employee_number`, `rfc`, `company_id`, `tenant_id`, `first_name`, `last_name`, `email`, `is_active`, `created_at`
 - **users** — `id`, `employee_id`, `company_id`, `tenant_id`, `email`, `password_hash`, `is_active`, `created_at`, `updated_at`
-- **passwordResetTokens** — `id`, `user_id`, `token`, `tenant_id`, `expires_at`, `created_at`
+- **password_reset_tokens** — `id`, `user_id`, `token`, `tenant_id`, `expires_at`, `created_at`
 
-Connection string lives in Secrets Manager. Every lambda reads `DB_SECRET_ARN` → `getSecret(arn)` → parses `{ connectionString }`.
+Connection string lives in Secrets Manager. Every lambda reads `DB_SECRET_ARN` → `getSecret(arn)` → parses `{ connectionString }` → passes to `getDb(connectionString)`.
 
 ## Error response format
 

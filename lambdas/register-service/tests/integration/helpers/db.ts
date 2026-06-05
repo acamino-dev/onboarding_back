@@ -1,10 +1,14 @@
+import dotenv from 'dotenv'
+import path from 'path'
 import { getDb } from '../../../../../shared/db/client'
 
+dotenv.config({ path: path.resolve(__dirname, '../../../../../.env.development') })
+
 export function getTestDb() {
-  const connectionString = process.env.TEST_DB_CONNECTION_STRING
+  const connectionString = process.env.DATABASE_URL
   if (!connectionString)
     throw new Error(
-      'TEST_DB_CONNECTION_STRING is not set. Copy .env.test.example to .env.test and fill in the value, then run: export $(cat .env.test)'
+      'DATABASE_URL is not set in .env.development. Ensure .env.development exists and contains DATABASE_URL="postgresql://..."'
     )
   return { db: getDb(connectionString), connectionString }
 }

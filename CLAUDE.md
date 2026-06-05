@@ -5,7 +5,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 ## Stack
 
 - Runtime: Node 22, TypeScript strict mode
-- ORM: Drizzle + `pg` (PostgreSQL via Secrets Manager connection string)
+- DB: Raw SQL + `pg` (PostgreSQL via Secrets Manager connection string)
 - Validation: Zod
 - Auth: bcrypt
 - Infra: AWS SAM — `template.yaml` at root
@@ -15,8 +15,8 @@ Auth module for the onboarding platform. Validates employees against HR data and
 
 | Path | Purpose |
 |---|---|
-| `shared/db/client.ts` | Drizzle client — memoized per container (Pool max=1) |
-| `shared/db/schema.ts` | All table definitions: `companies`, `employees`, `users`, `passwordResetTokens` |
+| `shared/db/client.ts` | Raw SQL client with `query()` and `queryOne()` — memoized per container (Pool max=1) |
+| `shared/db/types.ts` | TypeScript types for table rows: `Company`, `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
 | `shared/utils/handleError.ts` | Maps errors → real HTTP status + `{ errorCode, errorId }` response |
@@ -45,6 +45,13 @@ Success responses use standard HTTP status codes (`201`, `200`, etc.) with a pla
 ## DB access pattern
 
 Connection string comes from Secrets Manager. Every lambda receives `DB_SECRET_ARN` as env var and calls `getSecret(DB_SECRET_ARN)` → parses `{ connectionString }` → passes to `getDb(connectionString)`.
+
+## Migrations & Schema
+
+- Schema defined in `migrations/001_initial_schema.sql`
+- Tables: `companies`, `employees`, `users`, `password_reset_tokens`
+- All column names use `snake_case` (e.g., `employee_number`, `company_id`)
+- Query examples: `db.query(sql, [param1, param2])` returns `{ rows: T[] }`, `db.queryOne(sql, params)` returns `T | undefined`
 
 ## SAM specifics
 

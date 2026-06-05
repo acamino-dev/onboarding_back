@@ -493,6 +493,47 @@ Next steps:
 
 ---
 
+## DB queries (raw SQL)
+
+All database operations use raw SQL with parameterized queries. Example service:
+
+```typescript
+import type { Employee } from '../../../shared/db/types'
+import { NotFoundError } from '../../../shared/constants/errors'
+import { getDb } from '../../../shared/db/client'
+
+export async function findEmployee(
+  employeeNumber: string,
+  companyId: string,
+  tenantId: string,
+  connectionString: string
+): Promise<Employee> {
+  const db = getDb(connectionString)
+  
+  try {
+    const employee = await db.queryOne<Employee>(
+      'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
+      [employeeNumber, companyId, tenantId]
+    )
+    
+    if (!employee) throw new NotFoundError('Employee not found')
+    return employee
+  } catch (e) {
+    if (e instanceof NotFoundError) throw e
+    throw new Error(`Error on findEmployee: ${e}`)
+  }
+}
+```
+
+Rules:
+- Use `db.query<T>(sql, params)` for INSERT/UPDATE/DELETE (returns `{ rows: T[] }`)
+- Use `db.queryOne<T>(sql, params)` for SELECT returning ≤1 row (returns `T | undefined`)
+- All column names are `snake_case` (e.g., `employee_number`, `company_id`, `is_active`)
+- Parameterize all user input with `$1`, `$2`, etc.
+- Wrap in `try/catch`, rethrow custom errors, wrap DB errors as `Error("Error on <functionName>: ...")`
+
+---
+
 ## Code conventions (always enforce)
 
 - Every service function wraps its body in `try/catch`, rethrows custom errors (`ValidationError`, `NotFoundError`, `DuplicatedError`, `AuthError`) as-is, wraps unknown errors as `new Error("Error on <functionName>: " + e)`
