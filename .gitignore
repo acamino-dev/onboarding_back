@@ -209,3 +209,4 @@ $RECYCLE.BIN/
 
 .idea
 logfile.txt
+.env.development
