@@ -1,15 +1,13 @@
 import bcrypt from 'bcrypt'
 import type { User } from '../../../../shared/db/types'
+import { getDb } from '../../../../shared/db/client'
 import { createUser } from '../../services/createUser'
 import { EMPLOYEES, TEST_COMPANY_ID, TEST_TENANT_ID } from './helpers/constants'
-import { getTestDb } from './helpers/db'
-
-const { db, connectionString } = getTestDb()
 
 const testEmployee = {
   id: EMPLOYEES.forCreate.id,
   email: EMPLOYEES.forCreate.email,
-  companyId: TEST_COMPANY_ID,
+  company_id: TEST_COMPANY_ID,
 }
 
 const testBody = {
@@ -22,12 +20,14 @@ const testBody = {
 
 describe('createUser integration', () => {
   afterEach(async () => {
+    const db = await getDb()
     await db.query('DELETE FROM users WHERE employee_id = $1', [EMPLOYEES.forCreate.id])
   })
 
   it('inserts a user row with a valid bcrypt password hash', async () => {
-    await createUser(testEmployee, testBody, connectionString)
+    await createUser(testEmployee, testBody)
 
+    const db = await getDb()
     const inserted = await db.queryOne<User>('SELECT * FROM users WHERE employee_id = $1', [EMPLOYEES.forCreate.id])
 
     expect(inserted).toBeDefined()
@@ -38,9 +38,9 @@ describe('createUser integration', () => {
   })
 
   it('throws a wrapped Error when employeeId violates the FK constraint', async () => {
-    const nonExistentEmployee = { id: '00000000-0000-0000-0000-000000000000', email: 'x@x.com', companyId: TEST_COMPANY_ID }
+    const nonExistentEmployee = { id: '00000000-0000-0000-0000-000000000000', email: 'x@x.com', company_id: TEST_COMPANY_ID }
 
-    await expect(createUser(nonExistentEmployee, testBody, connectionString)).rejects.toThrow(
+    await expect(createUser(nonExistentEmployee, testBody)).rejects.toThrow(
       /Error on createUser/
     )
   })

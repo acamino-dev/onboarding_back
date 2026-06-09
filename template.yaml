@@ -1,6 +1,6 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: onboarding-back - Auth module
+Description: onboarding-back
 
 Globals:
   Function:
@@ -13,8 +13,8 @@ Globals:
       Variables:
         NODE_OPTIONS: --enable-source-maps
     VpcConfig:
-      SecurityGroupIds: !Split [',', !Ref LambdaSecurityGroupIds]
-      SubnetIds: !Split [',', !Ref LambdaSubnetIds]
+      SecurityGroupIds: !Split [",", !Ref LambdaSecurityGroupIds]
+      SubnetIds: !Split [",", !Ref LambdaSubnetIds]
 
 Parameters:
   LambdaSubnetIds:
@@ -23,9 +23,12 @@ Parameters:
   LambdaSecurityGroupIds:
     Type: String
     Description: Comma-separated list of security group IDs for Lambda VPC config
-  DbSecretArn:
+  Environment:
     Type: String
-    Description: ARN of the Secrets Manager secret containing DB connection string
+    Description: Deployment environment (Dev, Prod)
+    AllowedValues:
+      - Dev
+      - Prod
 
 Resources:
   AuthApi:
@@ -34,7 +37,7 @@ Resources:
       StageName: $default
       CorsConfiguration:
         AllowOrigins:
-          - '*'
+          - "*"
         AllowHeaders:
           - Content-Type
           - Authorization
@@ -51,13 +54,13 @@ Resources:
       Description: POST /auth/register - validates employee record and creates user account
       Environment:
         Variables:
-          DB_SECRET_ARN: !Ref DbSecretArn
+          DB_SECRET_ID: !Sub onBoardingCredentials${Environment}
       Policies:
         - Statement:
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue
-              Resource: !Ref DbSecretArn
+              Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onBoardingCredentials${Environment}-*
         - VPCAccessPolicy: {}
       Events:
         Register:
@@ -75,12 +78,12 @@ Resources:
         EntryPoints:
           - app.ts
         External:
-          - '@aws-sdk/*'
+          - "@aws-sdk/*"
 
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
-    Value: !Sub 'https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com'
+    Value: !Sub "https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com"
   RegisterFunctionArn:
     Description: Register Lambda ARN
     Value: !GetAtt RegisterFunction.Arn

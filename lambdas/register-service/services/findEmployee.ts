@@ -5,11 +5,10 @@ import type { Employee } from '../../../shared/db/types'
 export async function findEmployee(
   employeeNumber: string,
   companyId: string,
-  tenantId: string,
-  connectionString: string
+  tenantId: string
 ): Promise<Employee> {
   try {
-    const db = getDb(connectionString)
+    const db = await getDb()
 
     const company = await db.queryOne<{ id: string }>(
       'SELECT id FROM companies WHERE id = $1 AND tenant_id = $2',

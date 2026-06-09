@@ -1,31 +1,29 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
-import { getSecret } from '../../../../shared/utils/secrets'
 import { findEmployee } from '../../services/findEmployee'
 import { checkUserExists } from '../../services/checkUserExists'
 import { createUser } from '../../services/createUser'
+import type { Employee } from '../../../../shared/db/types'
 
-jest.mock('../../../../shared/utils/secrets')
 jest.mock('../../services/findEmployee')
 jest.mock('../../services/checkUserExists')
 jest.mock('../../services/createUser')
 
-const mockGetSecret = getSecret as jest.MockedFunction<typeof getSecret>
 const mockFindEmployee = findEmployee as jest.MockedFunction<typeof findEmployee>
 const mockCheckUserExists = checkUserExists as jest.MockedFunction<typeof checkUserExists>
 const mockCreateUser = createUser as jest.MockedFunction<typeof createUser>
 
-const mockEmployee = {
+const mockEmployee: Employee = {
   id: '550e8400-e29b-41d4-a716-446655440010',
-  employeeNumber: 'EMP001',
+  employee_number: 'EMP001',
   rfc: 'GOAA970101AB1',
-  companyId: '550e8400-e29b-41d4-a716-446655440000',
-  tenantId: '550e8400-e29b-41d4-a716-446655440001',
-  firstName: 'John',
-  lastName: 'Doe',
+  company_id: '550e8400-e29b-41d4-a716-446655440000',
+  tenant_id: '550e8400-e29b-41d4-a716-446655440001',
+  first_name: 'John',
+  last_name: 'Doe',
   email: 'john.doe@company.com',
-  isActive: true,
-  createdAt: new Date(),
+  is_active: true,
+  created_at: new Date(),
 }
 
 const validBody = {
@@ -44,10 +42,7 @@ const baseEvent: Partial<APIGatewayProxyEventV2> = {
 describe('register-service handler', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env.DB_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123456789:secret:onboarding/db'
-    mockGetSecret.mockResolvedValue(
-      JSON.stringify({ connectionString: 'postgresql://localhost/test' })
-    )
+    process.env.DB_SECRET_ID = 'onBoardingCredentialsDev'
     mockFindEmployee.mockResolvedValue(mockEmployee)
     mockCheckUserExists.mockResolvedValue(undefined)
     mockCreateUser.mockResolvedValue(undefined)
@@ -71,7 +66,7 @@ describe('register-service handler', () => {
   })
 
   it('should return 200 with errorCode 702 when RFC does not match employee record', async () => {
-    mockFindEmployee.mockResolvedValue({ ...mockEmployee, rfc: 'DIFF970101AB1' })
+    mockFindEmployee.mockResolvedValue({ ...mockEmployee, rfc: 'DIFF970101AB1' } as Employee)
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(200)
     const parsed = JSON.parse(result.body as string)
@@ -113,17 +108,8 @@ describe('register-service handler', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 708 when DB_SECRET_ARN is not set', async () => {
-    delete process.env.DB_SECRET_ARN
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(708)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 200 with errorCode 708 when getSecret throws', async () => {
-    mockGetSecret.mockRejectedValue(new Error('Secrets Manager unavailable'))
+  it('should return 200 with errorCode 708 when DB_SECRET_ID is not set', async () => {
+    delete process.env.DB_SECRET_ID
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(200)
     const parsed = JSON.parse(result.body as string)

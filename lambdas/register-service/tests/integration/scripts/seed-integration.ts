@@ -1,23 +1,18 @@
-import dotenv from 'dotenv'
-import path from 'path'
 import bcrypt from 'bcrypt'
 import { getDb } from '../../../../../shared/db/client'
 import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID, TEST_TENANT_ID } from '../helpers/constants'
 
-dotenv.config({ path: path.resolve(__dirname, '../../../../../.env.development') })
-
-const connectionString = process.env.DATABASE_URL
-if (!connectionString) {
-  console.error('DATABASE_URL is not set in .env.development')
+if (!process.env.DB_SECRET_ID) {
+  console.error('DB_SECRET_ID is not set')
   process.exit(1)
 }
-
-const db = getDb(connectionString)
 
 async function seed() {
   console.log('Seeding integration test data...')
 
   try {
+    const db = await getDb()
+
     await db.query(
       'INSERT INTO companies (id, name, tenant_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
       [TEST_COMPANY_ID, 'Integration Test Company', TEST_TENANT_ID]

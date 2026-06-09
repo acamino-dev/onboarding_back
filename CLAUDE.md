@@ -5,7 +5,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 ## Stack
 
 - Runtime: Node 22, TypeScript strict mode
-- DB: Raw SQL + `pg` (PostgreSQL via Secrets Manager connection string)
+- DB: Raw SQL + `pg` (PostgreSQL — credentials from Secrets Manager)
 - Validation: Zod
 - Auth: bcrypt
 - Infra: AWS SAM — `template.yaml` at root
@@ -15,7 +15,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 
 | Path | Purpose |
 |---|---|
-| `shared/db/client.ts` | Raw SQL client with `query()` and `queryOne()` — memoized per container (Pool max=1) |
+| `shared/db/client.ts` | Async `getDb()` — fetches credentials from Secrets Manager via `DB_SECRET_ID` env var, creates memoized Pool (max=1), exposes `query()` and `queryOne()` |
 | `shared/db/types.ts` | TypeScript types for table rows: `Company`, `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
@@ -44,7 +44,7 @@ Success responses use standard HTTP status codes (`201`, `200`, etc.) with a pla
 
 ## DB access pattern
 
-Connection string comes from Secrets Manager. Every lambda receives `DB_SECRET_ARN` as env var and calls `getSecret(DB_SECRET_ARN)` → parses `{ connectionString }` → passes to `getDb(connectionString)`.
+Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Sub onBoardingCredentials${Environment}`). Services call `await getDb()` — which reads `DB_SECRET_ID`, fetches the secret `{ user, password, host, port, dbname }` from Secrets Manager, and creates a memoized Pool. No connection string is constructed or passed anywhere; services take no DB parameters.
 
 ## Migrations & Schema
 
@@ -58,7 +58,9 @@ Connection string comes from Secrets Manager. Every lambda receives `DB_SECRET_A
 - All functions: `arm64`, `nodejs22.x`, 30s timeout, 256MB, VPC-attached
 - Build: esbuild per function (`BuildMethod: esbuild`), `@aws-sdk/*` marked external
 - CORS handled at API Gateway level — lambdas do not set CORS headers
-- DB secret ARN injected via SAM parameter `DbSecretArn` → env var `DB_SECRET_ARN`
+- DB secret ID injected via SAM `!Sub onBoardingCredentials${Environment}` → env var `DB_SECRET_ID`
+- IAM policy grants `secretsmanager:GetSecretValue` on `onBoardingCredentials${Environment}-*`
+- Deploy with `sam deploy --config-env dev` or `--config-env prod`
 
 ## Commands
 
@@ -74,11 +76,10 @@ Every lambda test suite (`tests/unit/app.test.ts`) must cover these cases in add
 
 | Case | Expected errorCode |
 |---|---|
-| `DB_SECRET_ARN` env var not set | `708` |
-| `getSecret` throws (Secrets Manager unavailable) | `708` |
+| `DB_SECRET_ID` env var not set | `708` |
 | Each service function throws a generic DB error | `708` |
 
-**Pattern** — use `beforeEach` (not `beforeAll`) to reset mocks and env vars. Always mock `shared/utils/secrets` in addition to service modules. Each service's DB error test simulates the wrapped error the service already produces: `new Error('Error on <fn>: ...')`.
+**Pattern** — use `beforeEach` (not `beforeAll`) to reset mocks and env vars. Mock all service modules. Each service's DB error test simulates the wrapped error the service already produces: `new Error('Error on <fn>: ...')`. Do not mock `shared/utils/secrets` or `shared/db/client` — services are mocked so `getDb` is never called in unit tests.
 
 The 708 cases are infrastructure-level and apply to every lambda by design. They are generated automatically by `/new-lambda` and must be preserved when tests are modified manually.
 

@@ -1,9 +1,9 @@
 import { DuplicatedError } from '../../../shared/constants/errors'
 import { getDb } from '../../../shared/db/client'
 
-export async function checkUserExists(employeeId: string, connectionString: string): Promise<void> {
+export async function checkUserExists(employeeId: string): Promise<void> {
   try {
-    const db = getDb(connectionString)
+    const db = await getDb()
 
     const existing = await db.queryOne<{ id: string }>(
       'SELECT id FROM users WHERE employee_id = $1',
