@@ -15,7 +15,7 @@ const main = async (): Promise<void> => {
     dbname: string
   }
 
-  const pool = new Pool({ user, password, host, port, database: dbname })
+  const pool = new Pool({ user, password, host, port, database: dbname, ssl: { rejectUnauthorized: false } })
   let client: PoolClient | undefined
 
   try {

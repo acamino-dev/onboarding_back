@@ -6,8 +6,8 @@
     "unit": "jest",
     "lint": "eslint '*.ts' --quiet --fix",
     "compile": "tsc",
-    "test": "npm run compile && npm run unit",
-    "test:integration": "jest --config jest.integration.config.ts",
+    "test": "npm run compile && npm run unit && npm run test:integration",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts",
     "seed:integration": "DB_SECRET_ID=onboardingCredentialsDev ts-node tests/integration/scripts/seed-integration.ts"
   },
   "dependencies": {

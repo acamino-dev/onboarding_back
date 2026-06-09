@@ -335,7 +335,7 @@ export default {
     "unit": "jest",
     "lint": "eslint '*.ts' --quiet --fix",
     "compile": "tsc",
-    "test": "npm run compile && npm run unit",
+    "test": "npm run compile && npm run unit && npm run test:integration",
     "test:integration": "jest --config jest.integration.config.ts",
     "seed:integration": "ts-node tests/integration/scripts/seed-integration.ts"
   },
@@ -604,14 +604,14 @@ Fill every placeholder from confirmed contracts. Only include in `errorCode.enum
 Run:
 
 ```bash
-cd lambdas/<LambdaName> && npm test
+cd lambdas/<LambdaName> && npm run compile && npm run unit
 ```
 
 If any test fails:
 1. Read the full error output
 2. Identify which file causes the failure (`app.ts`, `validators.ts`, a service file, or the test itself if the mock is wrong)
 3. Fix the minimal change needed — do not alter test assertions unless the scenario contract (Step 1b) was misread
-4. Re-run `npm test`
+4. Re-run `npm run compile && npm run unit`
 5. Repeat until green
 
 Common failure causes and fixes:
@@ -620,7 +620,7 @@ Common failure causes and fixes:
 - `ValidationError` not thrown for missing fields → add required field to Zod schema in `validators.ts`
 - Type error on compile → fix the TS type mismatch in the flagged file
 
-Only proceed to Step 7 once `npm test` reports all tests passing.
+Only proceed to Step 7 once unit tests pass. Integration tests (`npm run test:integration`) require a live DB — run those separately after seeding.
 
 ---
 
