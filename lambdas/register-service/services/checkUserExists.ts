@@ -1,7 +1,7 @@
 import { DuplicatedError } from '../../../shared/constants/errors'
 import { getDb } from '../../../shared/db/client'
 
-export async function checkUserExists(employeeId: string): Promise<void> {
+export const checkUserExists = async (employeeId: string): Promise<void> => {
   try {
     const db = await getDb()
 

@@ -113,9 +113,17 @@ lambdas/<LambdaName>/
 │   └── validators.ts
 ├── types/
 │   └── RequestBody.d.ts
-├── tests/unit/
-│   └── app.test.ts
+├── tests/
+│   ├── unit/
+│   │   └── app.test.ts
+│   └── integration/
+│       ├── helpers/
+│       │   └── constants.ts
+│       ├── scripts/
+│       │   └── seed-integration.ts
+│       └── <serviceName>.test.ts  (one file per service)
 ├── jest.config.ts
+├── jest.integration.config.ts
 ├── tsconfig.json
 └── package.json
 ```
@@ -165,7 +173,7 @@ const schema = z.object({
   // fields from requirements
 })
 
-export function validateBody(rawBody: string): RequestBody {
+export const validateBody = (rawBody: string): RequestBody => {
   if (!rawBody) throw new ValidationError('Request body is empty')
 
   let parsed: unknown
@@ -200,7 +208,7 @@ const HEADERS = { 'Content-Type': 'application/json' } as const
 const createErrorId = (): string =>
   crypto.createHash('shake128', { outputLength: 4 }).update(`${Date.now()}${Math.random()}`).digest('hex')
 
-export function handleError(error: unknown): APIGatewayProxyStructuredResultV2 {
+export const handleError = (error: unknown): APIGatewayProxyStructuredResultV2 => {
   const errorId = createErrorId()
   console.error(`Error ID: ${errorId} - ${error}`)
 
@@ -327,11 +335,154 @@ export default {
     "unit": "jest",
     "lint": "eslint '*.ts' --quiet --fix",
     "compile": "tsc",
-    "test": "npm run compile && npm run unit"
+    "test": "npm run compile && npm run unit",
+    "test:integration": "jest --config jest.integration.config.ts",
+    "seed:integration": "ts-node tests/integration/scripts/seed-integration.ts"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "ts-node": "^10.9.2"
+  }
 }
 ```
+
+---
+
+### `jest.integration.config.ts`
+
+```typescript
+export default {
+  transform: { '^.+\\.ts?$': 'ts-jest' },
+  clearMocks: true,
+  collectCoverage: false,
+  testMatch: ['**/tests/integration/*.test.ts'],
+  testTimeout: 30000,
+}
+```
+
+---
+
+### `tests/integration/helpers/constants.ts`
+
+Holds all fixture IDs and data used across integration tests. Use deterministic UUIDs so seeds are idempotent.
+
+```typescript
+export const TEST_TENANT_ID = '<deterministic-uuid>'
+export const TEST_COMPANY_ID = '<deterministic-uuid>'
+
+// One entry per fixture row needed by the suite.
+// Key names should reflect the state of the row (e.g. active, inactive, withUser, clean, forCreate).
+export const <ENTITIES> = {
+  <fixture>: {
+    id: '<deterministic-uuid>',
+    // ...fields needed by tests
+  },
+} as const
+
+// Export IDs for any seeded rows that tests need to reference directly
+export const SEEDED_<ROW>_ID = '<deterministic-uuid>'
+```
+
+Rules:
+- All IDs must be deterministic UUIDs (not `crypto.randomUUID()`)
+- Name fixtures after their DB state, not after test cases
+- Export only what tests actually use
+
+---
+
+### `tests/integration/scripts/seed-integration.ts`
+
+Inserts all fixture data needed by the integration suite. Must be idempotent — use `ON CONFLICT DO NOTHING`.
+
+```typescript
+import { getDb } from '../../../../../shared/db/client'
+import { /* constants */ } from '../helpers/constants'
+
+if (!process.env.DB_SECRET_ID) {
+  console.error('DB_SECRET_ID is not set')
+  process.exit(1)
+}
+
+const seed = async (): Promise<void> => {
+  console.log('Seeding integration test data...')
+
+  try {
+    const db = await getDb()
+
+    // Insert prerequisite rows first (e.g. companies before employees, employees before users)
+    // Always use ON CONFLICT DO NOTHING for idempotency
+    await db.query(
+      'INSERT INTO <table> (...) VALUES (...) ON CONFLICT DO NOTHING',
+      [/* values from constants */]
+    )
+
+    // Repeat for each fixture row
+
+    console.log('Done.')
+    process.exit(0)
+  } catch (e) {
+    console.error('Seed error:', e)
+    process.exit(1)
+  }
+}
+
+seed()
+```
+
+Run before the suite: `npm run seed:integration` (requires `DB_SECRET_ID` in env).
+
+---
+
+### `tests/integration/<serviceName>.test.ts` — one file per service
+
+Integration tests call service functions directly against a real DB — no mocks, no `lambdaHandler`.
+
+**What to cover per service:**
+
+| Service type | Cases to test |
+|---|---|
+| SELECT (read) | happy path returns correct row; each NOT FOUND path throws the right custom error |
+| INSERT (write) | row is actually in DB after call (verify with `db.queryOne`); FK/unique violations throw wrapped `Error` matching `/Error on <fn>/` |
+| UPDATE/DELETE | row state changed in DB after call; row-not-found throws expected error |
+
+**Pattern:**
+
+```typescript
+import { <CustomError> } from '../../../../shared/constants/errors'
+import { getDb } from '../../../../shared/db/client'
+import { <serviceFunction> } from '../../services/<serviceName>'
+import { /* constants */ } from './helpers/constants'
+
+describe('<serviceName> integration', () => {
+  // For write services: clean up inserted rows after each test
+  afterEach(async () => {
+    const db = await getDb()
+    await db.query('DELETE FROM <table> WHERE <condition>', [/* fixture id */])
+  })
+
+  it('happy path — <describe expected result>', async () => {
+    const result = await <serviceFunction>(/* fixture args */)
+    // Assert on returned value or verify DB state
+    expect(result.<field>).toBe(<expectedValue>)
+  })
+
+  it('throws <CustomError> when <condition>', async () => {
+    await expect(<serviceFunction>(/* bad args */)).rejects.toThrow(<CustomError>)
+  })
+
+  it('throws wrapped Error when DB constraint is violated', async () => {
+    await expect(<serviceFunction>(/* args that violate FK/unique */)).rejects.toThrow(
+      /Error on <serviceName>/
+    )
+  })
+})
+```
+
+Rules:
+- `afterEach` cleanup only on write services (INSERT/UPDATE/DELETE) — SELECT services need none
+- Assert DB state directly with `db.queryOne` for INSERT tests — don't trust the function's return alone
+- Use fixture constants for all IDs, never inline raw UUIDs in test bodies
+- No mocks — `DB_SECRET_ID` must be in env; tests fail fast if not set
 
 ---
 
@@ -499,11 +650,11 @@ import type { Employee } from '../../../shared/db/types'
 import { NotFoundError } from '../../../shared/constants/errors'
 import { getDb } from '../../../shared/db/client'
 
-export async function findEmployee(
+export const findEmployee = async (
   employeeNumber: string,
   companyId: string,
   tenantId: string
-): Promise<Employee> {
+): Promise<Employee> => {
   try {
     const db = await getDb()
 
@@ -532,6 +683,7 @@ Rules:
 
 ## Code conventions (always enforce)
 
+- All functions use arrow function syntax: `export const fn = (...): ReturnType => { ... }` and `export const fn = async (...): Promise<ReturnType> => { ... }` — never `function` declarations
 - Every service function wraps its body in `try/catch`, rethrows custom errors (`ValidationError`, `NotFoundError`, `DuplicatedError`, `AuthError`) as-is, wraps unknown errors as `new Error("Error on <functionName>: " + e)`
 - Environment variable reads at module level always guard with `if (!varName) throw new Error(...)`
 - No comments unless the WHY is non-obvious

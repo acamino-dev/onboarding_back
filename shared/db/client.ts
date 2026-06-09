@@ -12,7 +12,7 @@ export interface DB {
 
 let db: DB | undefined
 
-export async function getDb(): Promise<DB> {
+export const getDb = async (): Promise<DB> => {
   if (db) return db
 
   const secretId = process.env.DB_SECRET_ID
@@ -42,11 +42,11 @@ export async function getDb(): Promise<DB> {
   })
 
   db = {
-    async query<T>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
+    query: async <T>(sql: string, params?: unknown[]): Promise<QueryResult<T>> => {
       const result = await pool.query(sql, params)
       return { rows: result.rows as T[] }
     },
-    async queryOne<T>(sql: string, params?: unknown[]): Promise<T | undefined> {
+    queryOne: async <T>(sql: string, params?: unknown[]): Promise<T | undefined> => {
       const result = await pool.query(sql, params)
       return (result.rows[0] as T) || undefined
     },

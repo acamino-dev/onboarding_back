@@ -10,7 +10,7 @@ const registerSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters').max(72),
 })
 
-export function validateBody(rawBody: string): RequestBody {
+export const validateBody = (rawBody: string): RequestBody => {
   if (!rawBody) throw new ValidationError('Request body is empty')
 
   let parsed: unknown

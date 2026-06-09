@@ -16,7 +16,7 @@ const HEADERS = { 'Content-Type': 'application/json' } as const
 const createErrorId = (): string =>
   crypto.createHash('shake128', { outputLength: 4 }).update(`${Date.now()}${Math.random()}`).digest('hex')
 
-export function handleError(error: unknown): APIGatewayProxyStructuredResultV2 {
+export const handleError = (error: unknown): APIGatewayProxyStructuredResultV2 => {
   const errorId = createErrorId()
   console.error(`Error ID: ${errorId} - ${error}`)
 

@@ -2,11 +2,11 @@ import { NotFoundError } from '../../../shared/constants/errors'
 import { getDb } from '../../../shared/db/client'
 import type { Employee } from '../../../shared/db/types'
 
-export async function findEmployee(
+export const findEmployee = async (
   employeeNumber: string,
   companyId: string,
   tenantId: string
-): Promise<Employee> {
+): Promise<Employee> => {
   try {
     const db = await getDb()
 

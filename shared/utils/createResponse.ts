@@ -4,10 +4,10 @@ const HEADERS = {
   'Content-Type': 'application/json',
 } as const
 
-export function createResponse(
+export const createResponse = (
   statusCode: number,
   body: unknown
-): APIGatewayProxyStructuredResultV2 {
+): APIGatewayProxyStructuredResultV2 => {
   return {
     statusCode,
     headers: HEADERS,

@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { Pool } from 'pg'
 
-export async function runMigrations(connectionString: string): Promise<void> {
+export const runMigrations = async (connectionString: string): Promise<void> => {
   const pool = new Pool({ connectionString })
 
   try {

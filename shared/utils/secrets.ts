@@ -3,7 +3,7 @@ import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-sec
 const client = new SecretsManagerClient({ region: 'us-east-1' })
 const cache = new Map<string, string>()
 
-export async function getSecret(secretId: string): Promise<string> {
+export const getSecret = async (secretId: string): Promise<string> => {
   const cached = cache.get(secretId)
   if (cached) return cached
 

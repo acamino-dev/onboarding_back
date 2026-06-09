@@ -10,7 +10,7 @@ type Employee = {
 
 const BCRYPT_ROUNDS = 10
 
-export async function createUser(employee: Employee, body: RequestBody): Promise<void> {
+export const createUser = async (employee: Employee, body: RequestBody): Promise<void> => {
   try {
     const db = await getDb()
     const passwordHash = await bcrypt.hash(body.password, BCRYPT_ROUNDS)
