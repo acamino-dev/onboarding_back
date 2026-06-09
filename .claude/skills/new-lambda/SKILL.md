@@ -43,7 +43,7 @@ From the stated scenarios, infer and summarize back to the user:
   - `709` conflict → `DuplicatedError`
   - `710` accessToken expired → `TokenExpiredError`
 - **DB/AWS operations implied** (e.g. "look up employee by email", "insert new user row")
-- **Environment variables needed** (e.g. `DB_SECRET_ARN`)
+- **Environment variables needed** (note: `DB_SECRET_ID` is injected automatically by `template.yaml` — only list extra vars beyond DB access)
 
 Present this as a brief contract summary and ask the user to confirm or correct it before generating any files.
 
@@ -72,17 +72,8 @@ Before creating any other file, generate `tests/unit/app.test.ts` from the confi
 Every lambda test suite must include these cases. They cover failure modes that exist in every lambda by design:
 
 ```typescript
-it('should return 200 with errorCode 708 when DB_SECRET_ARN is not set', async () => {
-  delete process.env.DB_SECRET_ARN
-  const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-  expect(result.statusCode).toBe(200)
-  const parsed = JSON.parse(result.body as string)
-  expect(parsed.errorCode).toBe(708)
-  expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-})
-
-it('should return 200 with errorCode 708 when getSecret throws', async () => {
-  mockGetSecret.mockRejectedValue(new Error('Secrets Manager unavailable'))
+it('should return 200 with errorCode 708 when DB_SECRET_ID is not set', async () => {
+  delete process.env.DB_SECRET_ID
   const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
   expect(result.statusCode).toBe(200)
   const parsed = JSON.parse(result.body as string)
@@ -145,8 +136,8 @@ export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   try {
-    const DB_SECRET_ARN = process.env.DB_SECRET_ARN
-    if (!DB_SECRET_ARN) throw new Error('DB_SECRET_ARN is not set')
+    const DB_SECRET_ID = process.env.DB_SECRET_ID
+    if (!DB_SECRET_ID) throw new Error('DB_SECRET_ID is not set')
 
     const body = validateBody(event.body ?? '')
 
@@ -159,7 +150,7 @@ export const lambdaHandler = async (
 }
 ```
 
-Replace env var guards with whatever vars the lambda actually needs. Always read env vars **inside** the handler — never at module level. Module-level reads execute at import time, before Jest's `beforeAll` can set them, breaking every generated test.
+`DB_SECRET_ID` is always present — it is injected by `template.yaml`. The guard exists only to produce a clean 708 if the env var is missing in a misconfigured environment. Add guards for any other env vars the lambda needs. Always read env vars **inside** the handler — never at module level. Module-level reads execute at import time, before Jest's `beforeAll` can set them, breaking every generated test.
 
 ---
 
@@ -263,14 +254,11 @@ Structure reference:
 ```typescript
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
-import { getSecret } from '../../../../shared/utils/secrets'
 // one import per scaffolded service
 import { <functionName> } from '../../services/<serviceName>'
 
-jest.mock('../../../../shared/utils/secrets')
 jest.mock('../../services/<serviceName>')
 
-const mockGetSecret = getSecret as jest.MockedFunction<typeof getSecret>
 const mock<FunctionName> = <functionName> as jest.MockedFunction<typeof <functionName>>
 
 const baseEvent: Partial<APIGatewayProxyEventV2> = {
@@ -281,16 +269,17 @@ const baseEvent: Partial<APIGatewayProxyEventV2> = {
 describe('<LambdaName>', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env.DB_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123456789:secret:dev'
-    mockGetSecret.mockResolvedValue(JSON.stringify({ connectionString: 'postgresql://localhost/test' }))
+    process.env.DB_SECRET_ID = 'onBoardingCredentialsDev'
     // default happy-path return values for each service mock
     mock<FunctionName>.mockResolvedValue(/* happy-path return value */)
   })
 
   // one it() per confirmed scenario — success and error cases
-  // + mandatory infrastructure tests (DB_SECRET_ARN, getSecret, each service DB error)
+  // + mandatory infrastructure tests (DB_SECRET_ID, each service DB error)
 })
 ```
+
+Do NOT mock `shared/utils/secrets` or `shared/db/client` — services are mocked at the module boundary, so `getDb` and `getSecret` are never called in unit tests.
 
 ---
 
@@ -354,8 +343,16 @@ After creating all files, add the Lambda resource to `template.yaml` following t
    - `FunctionName`
    - `Handler` path
    - `Events` (API Gateway path and method)
-   - `Environment` → `Variables` (add required env vars)
-   - `Policies` (add as needed)
+   - `Environment` → `Variables`: always include `DB_SECRET_ID: !Sub onBoardingCredentials${Environment}` plus any extra vars
+   - `Policies`: always include the Secrets Manager policy block:
+     ```yaml
+     - Statement:
+         - Effect: Allow
+           Action:
+             - secretsmanager:GetSecretValue
+           Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onBoardingCredentials${Environment}-*
+     - VPCAccessPolicy: {}
+     ```
 
 2. **API Gateway event** path convention: `/api/{entity}/{action}` e.g. `/api/user/register`
 
@@ -467,7 +464,7 @@ If any test fails:
 5. Repeat until green
 
 Common failure causes and fixes:
-- `DB_SECRET_ARN is not set` → env var read is at module level; move inside handler (see `app.ts` template)
+- `DB_SECRET_ID is not set` → env var read is at module level; move inside handler (see `app.ts` template)
 - Mock returns wrong shape → update `mockResolvedValue` in the test to match the actual return type of the service
 - `ValidationError` not thrown for missing fields → add required field to Zod schema in `validators.ts`
 - Type error on compile → fix the TS type mismatch in the flagged file
@@ -505,17 +502,16 @@ import { getDb } from '../../../shared/db/client'
 export async function findEmployee(
   employeeNumber: string,
   companyId: string,
-  tenantId: string,
-  connectionString: string
+  tenantId: string
 ): Promise<Employee> {
-  const db = getDb(connectionString)
-  
   try {
+    const db = await getDb()
+
     const employee = await db.queryOne<Employee>(
       'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
       [employeeNumber, companyId, tenantId]
     )
-    
+
     if (!employee) throw new NotFoundError('Employee not found')
     return employee
   } catch (e) {
