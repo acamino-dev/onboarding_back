@@ -44,7 +44,7 @@ Success responses use standard HTTP status codes (`201`, `200`, etc.) with a pla
 
 ## DB access pattern
 
-Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Sub onBoardingCredentials${Environment}`). Services call `await getDb()` — which reads `DB_SECRET_ID`, fetches the secret `{ user, password, host, port, dbname }` from Secrets Manager, and creates a memoized Pool. No connection string is constructed or passed anywhere; services take no DB parameters.
+Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Sub onboardingCredentials${Environment}`). Services call `await getDb()` — which reads `DB_SECRET_ID`, fetches the secret `{ user, password, host, port, dbname }` from Secrets Manager, and creates a memoized Pool. No connection string is constructed or passed anywhere; services take no DB parameters.
 
 ## Migrations & Schema
 
@@ -58,8 +58,8 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 - All functions: `arm64`, `nodejs22.x`, 30s timeout, 256MB, VPC-attached
 - Build: esbuild per function (`BuildMethod: esbuild`), `@aws-sdk/*` marked external
 - CORS handled at API Gateway level — lambdas do not set CORS headers
-- DB secret ID injected via SAM `!Sub onBoardingCredentials${Environment}` → env var `DB_SECRET_ID`
-- IAM policy grants `secretsmanager:GetSecretValue` on `onBoardingCredentials${Environment}-*`
+- DB secret ID injected via SAM `!Sub onboardingCredentials${Environment}` → env var `DB_SECRET_ID`
+- IAM policy grants `secretsmanager:GetSecretValue` on `onboardingCredentials${Environment}-*`
 - Deploy with `sam deploy --config-env dev` or `--config-env prod`
 
 ## Commands

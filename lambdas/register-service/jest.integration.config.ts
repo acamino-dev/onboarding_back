@@ -4,4 +4,5 @@ export default {
   collectCoverage: false,
   testMatch: ['**/tests/integration/*.test.ts'],
   testTimeout: 30000,
+  setupFiles: ['./tests/integration/setup.ts'],
 }

@@ -8,7 +8,7 @@
     "compile": "tsc",
     "test": "npm run compile && npm run unit",
     "test:integration": "jest --config jest.integration.config.ts",
-    "seed:integration": "ts-node tests/integration/scripts/seed-integration.ts"
+    "seed:integration": "DB_SECRET_ID=onboardingCredentialsDev ts-node tests/integration/scripts/seed-integration.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1"
