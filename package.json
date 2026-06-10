@@ -5,7 +5,8 @@
   "scripts": {
     "build": "sam build",
     "deploy": "sam deploy --guided",
-    "migrate": "tsx shared/db/migrate.ts"
+    "migrate": "tsx shared/db/migrate.ts",
+    "reset-db": "NODE_ENV=dev tsx scripts/reset-db.ts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.0",
