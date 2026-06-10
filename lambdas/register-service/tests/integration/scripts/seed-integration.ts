@@ -33,7 +33,7 @@ async function seed() {
 
     const passwordHash = await bcrypt.hash('TestSeed123!', 10)
     await db.query(
-      'INSERT INTO users (id, employee_id, company_id, email, first_name, last_name, password_hash) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING',
+      'INSERT INTO users (id, employee_id, company_id, email, first_name, last_name, password_hash) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING',
       [
         SEEDED_USER_ID,
         EMPLOYEES.withUser.id,
