@@ -8,13 +8,13 @@ const rl = readline.createInterface({
   output: process.stdout,
 })
 
-function prompt(question: string): Promise<string> {
+const prompt = (question: string): Promise<string> => {
   return new Promise((resolve) => {
     rl.question(question, resolve)
   })
 }
 
-async function resetDb() {
+const resetDb = async (): Promise<void> => {
   // Safety check: only in dev
   if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'dev') {
     console.error('❌ reset-db only works in dev environment')
@@ -27,7 +27,7 @@ async function resetDb() {
   }
 
   // Confirm with user
-  const confirm = await prompt('⚠️  This will drop all tables and reset to initial schema. Type "reset" to confirm: ')
+  const confirm: string = await prompt('⚠️  This will drop all tables and reset to initial schema. Type "reset" to confirm: ')
   if (confirm !== 'reset') {
     console.log('Cancelled.')
     rl.close()
@@ -47,11 +47,11 @@ async function resetDb() {
 
     // Read and execute migrations
     console.log('Executing migrations...')
-    const migrationPath = path.join(__dirname, '../migrations/001_initial_schema.sql')
-    const migration = fs.readFileSync(migrationPath, 'utf-8')
+    const migrationPath: string = path.join(__dirname, '../migrations/001_initial_schema.sql')
+    const migration: string = fs.readFileSync(migrationPath, 'utf-8')
 
     // Split by semicolon and execute each statement
-    const statements = migration.split(';').filter((stmt) => stmt.trim())
+    const statements: string[] = migration.split(';').filter((stmt) => stmt.trim())
     for (const statement of statements) {
       await db.query(statement)
     }
@@ -66,4 +66,4 @@ async function resetDb() {
   }
 }
 
-resetDb()
+void resetDb()
