@@ -1,6 +1,8 @@
 import * as readline from 'readline'
 import { Pool } from 'pg'
-import { getSecret } from '../shared/db/secrets'
+import { getSecret } from '../shared/utils/secrets'
+
+const SECRET_ID: string = process.env.DB_SECRET_ID ?? 'onboardingCredentialsDev'
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -19,11 +21,6 @@ const resetDb = async (): Promise<void> => {
     process.exit(1)
   }
 
-  if (!process.env.DB_SECRET_ID) {
-    console.error('❌ DB_SECRET_ID env var not set')
-    process.exit(1)
-  }
-
   const confirm: string = await prompt('⚠️  This will DROP and CREATE the database. Type "reset" to confirm: ')
   if (confirm !== 'reset') {
     console.log('Cancelled.')
@@ -32,8 +29,7 @@ const resetDb = async (): Promise<void> => {
   }
 
   try {
-    const secretId: string = process.env.DB_SECRET_ID
-    const raw: string = await getSecret(secretId)
+    const raw: string = await getSecret(SECRET_ID)
     const credentials: { user: string; password: string; host: string; port: number; dbname: string } = JSON.parse(raw)
 
     const adminPool: Pool = new Pool({
