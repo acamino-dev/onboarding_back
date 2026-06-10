@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt'
-import { getDb } from '../../../../../shared/db/client'
+import { getDb } from '../../../../../../shared/db/client'
 import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID } from '../helpers/constants'
 
 if (!process.env.DB_SECRET_ID) {

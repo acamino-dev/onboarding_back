@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ValidationError } from '../../../shared/constants/errors'
+import { ValidationError } from '../../../../shared/constants/errors'
 import type { RequestBody } from '../types/RequestBody'
 
 const registerSchema = z.object({

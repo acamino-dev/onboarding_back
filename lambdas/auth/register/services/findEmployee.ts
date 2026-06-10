@@ -1,6 +1,6 @@
-import { NotFoundError } from '../../../shared/constants/errors'
-import { getDb } from '../../../shared/db/client'
-import type { Employee } from '../../../shared/db/types'
+import { NotFoundError } from '../../../../shared/constants/errors'
+import { getDb } from '../../../../shared/db/client'
+import type { Employee } from '../../../../shared/db/types'
 
 export const findEmployee = async (
   employeeNumber: string,

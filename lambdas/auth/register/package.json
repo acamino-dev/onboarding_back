@@ -1,5 +1,5 @@
 {
-  "name": "register-service",
+  "name": "auth-register",
   "version": "1.0.0",
   "private": true,
   "scripts": {

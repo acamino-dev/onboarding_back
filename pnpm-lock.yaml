@@ -61,7 +61,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  lambdas/register-service:
+  lambdas/auth/register:
     dependencies:
       bcrypt:
         specifier: ^5.1.1

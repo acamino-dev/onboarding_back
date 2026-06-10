@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
-import type { User } from '../../../../shared/db/types'
-import { getDb } from '../../../../shared/db/client'
+import type { User } from '../../../../../shared/db/types'
+import { getDb } from '../../../../../shared/db/client'
 import { createUser } from '../../services/createUser'
 import { EMPLOYEES, TEST_COMPANY_ID } from './helpers/constants'
 

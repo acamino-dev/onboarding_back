@@ -1,4 +1,4 @@
-import { DuplicatedError } from '../../../../shared/constants/errors'
+import { DuplicatedError } from '../../../../../shared/constants/errors'
 import { checkUserExists } from '../../services/checkUserExists'
 import { EMPLOYEES } from './helpers/constants'
 

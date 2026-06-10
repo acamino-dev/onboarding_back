@@ -1,5 +1,5 @@
 packages:
-  - lambdas/*
+  - lambdas/**
 
 allowBuilds:
   bcrypt: true

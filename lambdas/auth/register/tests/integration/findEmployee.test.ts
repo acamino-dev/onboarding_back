@@ -1,4 +1,4 @@
-import { NotFoundError } from '../../../../shared/constants/errors'
+import { NotFoundError } from '../../../../../shared/constants/errors'
 import { findEmployee } from '../../services/findEmployee'
 import { EMPLOYEES, TEST_COMPANY_ID } from './helpers/constants'
 

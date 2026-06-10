@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
-import { createResponse } from '../../shared/utils/createResponse'
-import { handleError } from '../../shared/utils/handleError'
+import { createResponse } from '../../../shared/utils/createResponse'
+import { handleError } from '../../../shared/utils/handleError'
 import { checkUserExists } from './services/checkUserExists'
 import { createUser } from './services/createUser'
 import { findEmployee } from './services/findEmployee'

@@ -1,5 +1,5 @@
-import { DuplicatedError } from '../../../shared/constants/errors'
-import { getDb } from '../../../shared/db/client'
+import { DuplicatedError } from '../../../../shared/constants/errors'
+import { getDb } from '../../../../shared/db/client'
 
 export const checkUserExists = async (email: string): Promise<void> => {
   try {

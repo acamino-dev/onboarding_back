@@ -3,7 +3,7 @@ import { lambdaHandler } from '../../app'
 import { findEmployee } from '../../services/findEmployee'
 import { checkUserExists } from '../../services/checkUserExists'
 import { createUser } from '../../services/createUser'
-import type { Employee } from '../../../../shared/db/types'
+import type { Employee } from '../../../../../shared/db/types'
 
 jest.mock('../../services/findEmployee')
 jest.mock('../../services/checkUserExists')
@@ -64,7 +64,7 @@ describe('register-service handler', () => {
   })
 
   it('should return 400 with errorCode 705 when employee is not found', async () => {
-    const { NotFoundError } = await import('../../../../shared/constants/errors')
+    const { NotFoundError } = await import('../../../../../shared/constants/errors')
     mockFindEmployee.mockRejectedValue(new NotFoundError('Employee not found'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
@@ -74,7 +74,7 @@ describe('register-service handler', () => {
   })
 
   it('should return 400 with errorCode 709 when email is already registered', async () => {
-    const { DuplicatedError } = await import('../../../../shared/constants/errors')
+    const { DuplicatedError } = await import('../../../../../shared/constants/errors')
     mockCheckUserExists.mockRejectedValue(
       new DuplicatedError('Email already registered')
     )

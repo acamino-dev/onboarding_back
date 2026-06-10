@@ -49,7 +49,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: register-service
-      CodeUri: lambdas/register-service/
+      CodeUri: lambdas/auth/register/
       Handler: app.lambdaHandler
       Description: POST /auth/register - validates employee record and creates user account
       Environment:
