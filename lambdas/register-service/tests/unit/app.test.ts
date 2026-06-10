@@ -18,19 +18,17 @@ const mockEmployee: Employee = {
   employee_number: 'EMP001',
   rfc: 'GOAA970101AB1',
   company_id: '550e8400-e29b-41d4-a716-446655440000',
-  tenant_id: '550e8400-e29b-41d4-a716-446655440001',
-  first_name: 'John',
-  last_name: 'Doe',
-  email: 'john.doe@company.com',
   is_active: true,
   created_at: new Date(),
 }
 
 const validBody = {
   employee_number: 'EMP001',
-  rfc: 'GOAA970101AB1',
   company_id: '550e8400-e29b-41d4-a716-446655440000',
-  tenant_id: '550e8400-e29b-41d4-a716-446655440001',
+  rfc: 'GOAA970101AB1',
+  email: 'john.doe@company.com',
+  first_name: 'John',
+  last_name: 'Doe',
   password: 'SecurePass123!',
 }
 
@@ -65,15 +63,6 @@ describe('register-service handler', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when RFC does not match employee record', async () => {
-    mockFindEmployee.mockResolvedValue({ ...mockEmployee, rfc: 'DIFF970101AB1' } as Employee)
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
   it('should return 400 with errorCode 705 when employee is not found', async () => {
     const { NotFoundError } = await import('../../../../shared/constants/errors')
     mockFindEmployee.mockRejectedValue(new NotFoundError('Employee not found'))
@@ -84,10 +73,10 @@ describe('register-service handler', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 709 when user is already registered', async () => {
+  it('should return 400 with errorCode 709 when email is already registered', async () => {
     const { DuplicatedError } = await import('../../../../shared/constants/errors')
     mockCheckUserExists.mockRejectedValue(
-      new DuplicatedError('User already registered for this employee')
+      new DuplicatedError('Email already registered')
     )
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)

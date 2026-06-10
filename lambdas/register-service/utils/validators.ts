@@ -4,9 +4,11 @@ import type { RequestBody } from '../types/RequestBody'
 
 const registerSchema = z.object({
   employee_number: z.string().min(1).max(100),
-  rfc: z.string().length(13, 'RFC must be exactly 13 characters'),
   company_id: z.string().uuid('company_id must be a valid UUID'),
-  tenant_id: z.string().uuid('tenant_id must be a valid UUID'),
+  rfc: z.string().length(13, 'RFC must be exactly 13 characters'),
+  email: z.string().email('email must be a valid email address'),
+  first_name: z.string().min(1).max(255),
+  last_name: z.string().min(1).max(255),
   password: z.string().min(8, 'Password must be at least 8 characters').max(72),
 })
 

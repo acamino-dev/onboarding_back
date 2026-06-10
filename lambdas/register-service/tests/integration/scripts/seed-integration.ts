@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import { getDb } from '../../../../../shared/db/client'
-import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID, TEST_TENANT_ID } from '../helpers/constants'
+import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID } from '../helpers/constants'
 
 if (!process.env.DB_SECRET_ID) {
   console.error('DB_SECRET_ID is not set')
@@ -14,22 +14,18 @@ async function seed() {
     const db = await getDb()
 
     await db.query(
-      'INSERT INTO companies (id, name, tenant_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
-      [TEST_COMPANY_ID, 'Integration Test Company', TEST_TENANT_ID]
+      'INSERT INTO companies (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [TEST_COMPANY_ID, 'Integration Test Company']
     )
 
     for (const [key, emp] of Object.entries(EMPLOYEES)) {
       await db.query(
-        'INSERT INTO employees (id, employee_number, rfc, company_id, tenant_id, first_name, last_name, email, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT DO NOTHING',
+        'INSERT INTO employees (id, employee_number, rfc, company_id, is_active) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
         [
           emp.id,
           emp.employeeNumber,
           emp.rfc,
           TEST_COMPANY_ID,
-          TEST_TENANT_ID,
-          emp.firstName,
-          emp.lastName,
-          emp.email,
           key !== 'inactive',
         ]
       )
@@ -37,13 +33,14 @@ async function seed() {
 
     const passwordHash = await bcrypt.hash('TestSeed123!', 10)
     await db.query(
-      'INSERT INTO users (id, employee_id, company_id, tenant_id, email, password_hash) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING',
+      'INSERT INTO users (id, employee_id, company_id, email, first_name, last_name, password_hash) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING',
       [
         SEEDED_USER_ID,
         EMPLOYEES.withUser.id,
         TEST_COMPANY_ID,
-        TEST_TENANT_ID,
         EMPLOYEES.withUser.email,
+        EMPLOYEES.withUser.firstName,
+        EMPLOYEES.withUser.lastName,
         passwordHash,
       ]
     )

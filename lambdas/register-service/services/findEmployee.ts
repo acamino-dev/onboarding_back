@@ -5,21 +5,21 @@ import type { Employee } from '../../../shared/db/types'
 export const findEmployee = async (
   employeeNumber: string,
   companyId: string,
-  tenantId: string
+  rfc: string
 ): Promise<Employee> => {
   try {
     const db = await getDb()
 
     const company = await db.queryOne<{ id: string }>(
-      'SELECT id FROM companies WHERE id = $1 AND tenant_id = $2',
-      [companyId, tenantId]
+      'SELECT id FROM companies WHERE id = $1',
+      [companyId]
     )
 
     if (!company) throw new NotFoundError('Company not found')
 
     const employee = await db.queryOne<Employee>(
-      'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
-      [employeeNumber, companyId, tenantId]
+      'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND rfc = $3 AND is_active = TRUE',
+      [employeeNumber, companyId, rfc]
     )
 
     if (!employee) throw new NotFoundError('Employee not found')

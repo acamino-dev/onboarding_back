@@ -1,5 +1,4 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
-import { ValidationError } from '../../shared/constants/errors'
 import { createResponse } from '../../shared/utils/createResponse'
 import { handleError } from '../../shared/utils/handleError'
 import { checkUserExists } from './services/checkUserExists'
@@ -13,13 +12,9 @@ export const lambdaHandler = async (
   try {
     const body = validateBody(event.body ?? '')
 
-    const employee = await findEmployee(body.employee_number, body.company_id, body.tenant_id)
+    const employee = await findEmployee(body.employee_number, body.company_id, body.rfc)
 
-    if (employee.rfc.toUpperCase() !== body.rfc.toUpperCase()) {
-      throw new ValidationError('RFC does not match employee record')
-    }
-
-    await checkUserExists(employee.id)
+    await checkUserExists(body.email)
     await createUser(employee, body)
 
     return createResponse(201, { message: 'Account created successfully' })

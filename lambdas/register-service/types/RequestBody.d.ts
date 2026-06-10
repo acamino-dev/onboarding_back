@@ -1,7 +1,9 @@
 export type RequestBody = {
   employee_number: string
-  rfc: string
   company_id: string
-  tenant_id: string
+  rfc: string
+  email: string
+  first_name: string
+  last_name: string
   password: string
 }

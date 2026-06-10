@@ -1,4 +1,3 @@
-export const TEST_TENANT_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
 export const TEST_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12'
 
 export const EMPLOYEES = {
