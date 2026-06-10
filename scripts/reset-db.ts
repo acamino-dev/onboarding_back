@@ -1,7 +1,6 @@
-import * as fs from 'fs'
-import * as path from 'path'
 import * as readline from 'readline'
-import { getDb } from '../shared/db/client'
+import { Pool } from 'pg'
+import { getSecret } from '../shared/db/secrets'
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -25,7 +24,7 @@ const resetDb = async (): Promise<void> => {
     process.exit(1)
   }
 
-  const confirm: string = await prompt('⚠️  This will drop all tables and reset to initial schema. Type "reset" to confirm: ')
+  const confirm: string = await prompt('⚠️  This will DROP and CREATE the database. Type "reset" to confirm: ')
   if (confirm !== 'reset') {
     console.log('Cancelled.')
     rl.close()
@@ -33,25 +32,28 @@ const resetDb = async (): Promise<void> => {
   }
 
   try {
-    console.log('Connecting to database...')
-    const db = await getDb()
+    const secretId: string = process.env.DB_SECRET_ID
+    const raw: string = await getSecret(secretId)
+    const credentials: { user: string; password: string; host: string; port: number; dbname: string } = JSON.parse(raw)
 
-    console.log('Dropping tables...')
-    await db.query('DROP TABLE IF EXISTS password_reset_tokens CASCADE')
-    await db.query('DROP TABLE IF EXISTS users CASCADE')
-    await db.query('DROP TABLE IF EXISTS employees CASCADE')
-    await db.query('DROP TABLE IF EXISTS companies CASCADE')
+    const adminPool: Pool = new Pool({
+      user: credentials.user,
+      password: credentials.password,
+      host: credentials.host,
+      port: credentials.port,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    })
 
-    console.log('Executing migrations...')
-    const migrationPath: string = path.join(__dirname, '../migrations/001_initial_schema.sql')
-    const migration: string = fs.readFileSync(migrationPath, 'utf-8')
+    console.log('Dropping database...')
+    await adminPool.query(`DROP DATABASE IF EXISTS ${credentials.dbname}`)
 
-    const statements: string[] = migration.split(';').filter((stmt: string): boolean => stmt.trim().length > 0)
-    for (const statement of statements) {
-      await db.query(statement)
-    }
+    console.log('Creating database...')
+    await adminPool.query(`CREATE DATABASE ${credentials.dbname}`)
 
-    console.log('✅ Database reset to initial schema')
+    await adminPool.end()
+
+    console.log('✅ Database dropped and recreated')
     rl.close()
     process.exit(0)
   } catch (error) {
