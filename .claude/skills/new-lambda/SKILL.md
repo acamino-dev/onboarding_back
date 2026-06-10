@@ -62,7 +62,7 @@ Present this as a brief contract summary and ask the user to confirm or correct 
 Before creating any other file, generate `tests/unit/app.test.ts` from the confirmed scenarios. Each scenario becomes one `it()` block:
 
 - Success cases → assert `statusCode` matches (e.g. `201`) and body fields
-- Error cases → assert `statusCode` is `200`, body has `{ errorCode: <code>, errorId: expect.stringMatching(/^[0-9a-f]{8}$/) }`
+- Error cases → assert `statusCode` is `400`, body has `{ errorCode: <code>, errorId: expect.stringMatching(/^[0-9a-f]{8}$/) }`
 - Include a `beforeEach` that sets all required env vars, sets up default happy-path mock return values, and calls `jest.clearAllMocks()`
 - Mock all DB/AWS calls using `jest.mock` at module level — mock the specific service files AND `shared/utils/secrets`, not `pg` directly
 - Use realistic sample data (not placeholder comments) derived from the scenarios
@@ -75,7 +75,7 @@ Every lambda test suite must include these cases. They cover failure modes that 
 it('should return 200 with errorCode 708 when DB_SECRET_ID is not set', async () => {
   delete process.env.DB_SECRET_ID
   const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-  expect(result.statusCode).toBe(200)
+  expect(result.statusCode).toBe(400)
   const parsed = JSON.parse(result.body as string)
   expect(parsed.errorCode).toBe(708)
   expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
@@ -85,7 +85,7 @@ it('should return 200 with errorCode 708 when DB_SECRET_ID is not set', async ()
 it('should return 200 with errorCode 708 when <functionName> throws a DB error', async () => {
   mock<FunctionName>.mockRejectedValue(new Error('Error on <functionName>: connection timeout'))
   const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-  expect(result.statusCode).toBe(200)
+  expect(result.statusCode).toBe(400)
   const parsed = JSON.parse(result.body as string)
   expect(parsed.errorCode).toBe(708)
   expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
@@ -232,7 +232,7 @@ export const handleError = (error: unknown): APIGatewayProxyStructuredResultV2 =
   }
 
   return {
-    statusCode: 200,
+    statusCode: 400,
     headers: HEADERS,
     body: JSON.stringify({ errorCode: internalStatusCode, errorId }),
   }
@@ -522,7 +522,7 @@ Derive everything from the already-confirmed contracts (Step 1b) and the API pat
 - One file per lambda. Never read or modify existing files in `docs/`.
 - Check if `docs/` exists; create it if not.
 - Use OpenAPI 3.0.3.
-- Because this API always returns HTTP 200 (even for errors), document a single `"200"` response using `oneOf` with the success shape and the error shape.
+- Document two responses: `"200"` for success and `"400"` for errors — each with their own schema.
 - Map each errorCode to a human-readable description in the error schema's `enum`/`description`.
 
 ### Template
@@ -545,15 +545,17 @@ paths:
               $ref: '#/components/schemas/RequestBody'
       responses:
         "200":
-          description: >
-            Always HTTP 200. Check `errorCode` field to distinguish success from error.
-            Absent `errorCode` means success.
+          description: Success
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:

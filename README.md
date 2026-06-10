@@ -68,7 +68,7 @@ Connection string lives in Secrets Manager. Every lambda reads `DB_SECRET_ARN` â
 
 ## Error response format
 
-All errors return **HTTP 200** with:
+All errors return **HTTP 400** with:
 
 ```json
 { "errorCode": <code>, "errorId": "<8-hex traceId>" }

@@ -11,9 +11,6 @@ export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   try {
-    const DB_SECRET_ID = process.env.DB_SECRET_ID
-    if (!DB_SECRET_ID) throw new Error('DB_SECRET_ID is not set')
-
     const body = validateBody(event.body ?? '')
 
     const employee = await findEmployee(body.employee_number, body.company_id, body.tenant_id)

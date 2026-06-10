@@ -19,12 +19,12 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | `shared/db/types.ts` | TypeScript types for table rows: `Company`, `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
-| `shared/utils/handleError.ts` | Maps errors → real HTTP status + `{ errorCode, errorId }` response |
+| `shared/utils/handleError.ts` | Maps errors → HTTP 400 + obfuscated `{ errorCode, errorId }` response |
 | `shared/utils/secrets.ts` | Secrets Manager with in-memory cache — `getSecret(arn)` |
 
 ## Error response format
 
-Errors always return HTTP 200 with:
+Errors always return HTTP 400 with:
 ```json
 { "errorCode": <internalStatusCode>, "errorId": "<8-hex traceId>" }
 ```

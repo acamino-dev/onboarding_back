@@ -52,7 +52,7 @@ export const handleError = (error: unknown): APIGatewayProxyStructuredResultV2 =
   }
 
   return {
-    statusCode: 200,
+    statusCode: 400,
     headers: HEADERS,
     body: JSON.stringify({ errorCode, errorId }),
   }

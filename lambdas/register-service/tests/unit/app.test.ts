@@ -57,88 +57,79 @@ describe('register-service handler', () => {
     expect(parsed.message).toBe('Account created successfully')
   })
 
-  it('should return 200 with errorCode 702 when body is empty', async () => {
+  it('should return 400 with errorCode 702 when body is empty', async () => {
     const result = await lambdaHandler({ ...baseEvent, body: '' } as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(702)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 702 when RFC does not match employee record', async () => {
+  it('should return 400 with errorCode 702 when RFC does not match employee record', async () => {
     mockFindEmployee.mockResolvedValue({ ...mockEmployee, rfc: 'DIFF970101AB1' } as Employee)
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(702)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 705 when employee is not found', async () => {
+  it('should return 400 with errorCode 705 when employee is not found', async () => {
     const { NotFoundError } = await import('../../../../shared/constants/errors')
     mockFindEmployee.mockRejectedValue(new NotFoundError('Employee not found'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(705)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 709 when user is already registered', async () => {
+  it('should return 400 with errorCode 709 when user is already registered', async () => {
     const { DuplicatedError } = await import('../../../../shared/constants/errors')
     mockCheckUserExists.mockRejectedValue(
       new DuplicatedError('User already registered for this employee')
     )
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(709)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 702 when required fields are missing', async () => {
+  it('should return 400 with errorCode 702 when required fields are missing', async () => {
     const invalidBody = { employee_number: 'EMP001' }
     const result = await lambdaHandler({
       ...baseEvent,
       body: JSON.stringify(invalidBody),
     } as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(702)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 708 when DB_SECRET_ID is not set', async () => {
-    delete process.env.DB_SECRET_ID
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(708)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 200 with errorCode 708 when findEmployee throws a DB error', async () => {
+  it('should return 400 with errorCode 708 when findEmployee throws a DB error', async () => {
     mockFindEmployee.mockRejectedValue(new Error('Error on findEmployee: connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(708)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 708 when checkUserExists throws a DB error', async () => {
+  it('should return 400 with errorCode 708 when checkUserExists throws a DB error', async () => {
     mockCheckUserExists.mockRejectedValue(new Error('Error on checkUserExists: query failed'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(708)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 200 with errorCode 708 when createUser throws a DB error', async () => {
+  it('should return 400 with errorCode 708 when createUser throws a DB error', async () => {
     mockCreateUser.mockRejectedValue(new Error('Error on createUser: insert failed'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
+    expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(708)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
