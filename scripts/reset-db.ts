@@ -1,5 +1,5 @@
 import * as readline from 'readline'
-import { Pool } from 'pg'
+import { Pool, PoolClient } from 'pg'
 import { getSecret } from '../shared/utils/secrets'
 
 const SECRET_ID: string = process.env.DB_SECRET_ID ?? 'onboardingCredentialsDev'
@@ -21,39 +21,59 @@ const resetDb = async (): Promise<void> => {
     process.exit(1)
   }
 
-  const confirm: string = await prompt('⚠️  This will DROP and CREATE the database. Type "reset" to confirm: ')
+  const confirm: string = await prompt('⚠️  This will drop all tables. Type "reset" to confirm: ')
   if (confirm !== 'reset') {
     console.log('Cancelled.')
     rl.close()
     process.exit(0)
   }
 
+  let client: PoolClient | undefined
+  let pool: Pool | undefined
+
   try {
     const raw: string = await getSecret(SECRET_ID)
     const credentials: { user: string; password: string; host: string; port: number; dbname: string } = JSON.parse(raw)
 
-    const adminPool: Pool = new Pool({
+    pool = new Pool({
       user: credentials.user,
       password: credentials.password,
       host: credentials.host,
       port: credentials.port,
-      database: 'postgres',
+      database: credentials.dbname,
       ssl: { rejectUnauthorized: false },
     })
 
-    console.log('Dropping database...')
-    await adminPool.query(`DROP DATABASE IF EXISTS ${credentials.dbname}`)
+    client = await pool.connect()
 
-    console.log('Creating database...')
-    await adminPool.query(`CREATE DATABASE ${credentials.dbname}`)
+    console.log('Fetching tables...')
+    const { rows } = await client.query<{ tablename: string }>(
+      "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+    )
+    const tables: string[] = rows.map((r: { tablename: string }): string => r.tablename)
 
-    await adminPool.end()
+    if (tables.length === 0) {
+      console.log('No tables to drop')
+      client.release()
+      await pool.end()
+      rl.close()
+      process.exit(0)
+    }
 
-    console.log('✅ Database dropped and recreated')
+    console.log(`Dropping ${tables.length} table(s)...`)
+    for (const table of tables) {
+      await client.query(`DROP TABLE IF EXISTS ${table} CASCADE`)
+    }
+
+    console.log('✅ All tables dropped')
+    client.release()
+    await pool.end()
     rl.close()
     process.exit(0)
   } catch (error) {
     console.error('❌ Reset failed:', error instanceof Error ? error.message : error)
+    client?.release()
+    await pool?.end()
     rl.close()
     process.exit(1)
   }
