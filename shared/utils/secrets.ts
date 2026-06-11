@@ -8,7 +8,9 @@ export const getSecret = async (secretId: string): Promise<string> => {
   if (cached) return cached
 
   const res = await client.send(new GetSecretValueCommand({ SecretId: secretId }))
-  if (!res.SecretString) throw new Error(`Secret ${secretId} has no string value`)
+  if (!res.SecretString) {
+    throw new Error(`Secret ${secretId} has no string value`)
+  }
 
   cache.set(secretId, res.SecretString)
   return res.SecretString

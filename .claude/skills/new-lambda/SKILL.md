@@ -83,7 +83,7 @@ it('should return 200 with errorCode 708 when DB_SECRET_ID is not set', async ()
 
 // One block per scaffolded service — replace <serviceName> and <functionName> for each
 it('should return 200 with errorCode 708 when <functionName> throws a DB error', async () => {
-  mock<FunctionName>.mockRejectedValue(new Error('Error on <functionName>: connection timeout'))
+  mock<FunctionName>.mockRejectedValue(new Error('connection timeout'))
   const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
   expect(result.statusCode).toBe(400)
   const parsed = JSON.parse(result.body as string)
@@ -196,48 +196,7 @@ export const validateBody = (rawBody: string): RequestBody => {
 
 ### `shared/utils/handleError.ts` — reference (do not recreate)
 
-The shared `handleError` generates an 8-hex-char errorID via `shake128`, logs it, and maps errors to `internalStatusCode`:
-
-```typescript
-import crypto from 'crypto'
-import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
-import { AuthError, DuplicatedError, NotFoundError, ValidationError } from '../constants/errors'
-
-const HEADERS = { 'Content-Type': 'application/json' } as const
-
-const createErrorId = (): string =>
-  crypto.createHash('shake128', { outputLength: 4 }).update(`${Date.now()}${Math.random()}`).digest('hex')
-
-export const handleError = (error: unknown): APIGatewayProxyStructuredResultV2 => {
-  const errorId = createErrorId()
-  console.error(`Error ID: ${errorId} - ${error}`)
-
-  let internalStatusCode: number
-  switch (true) {
-    case error instanceof ValidationError:
-      internalStatusCode = 702
-      break
-    case error instanceof AuthError:
-      internalStatusCode = 703
-      break
-    case error instanceof NotFoundError:
-      internalStatusCode = 705
-      break
-    case error instanceof DuplicatedError:
-      internalStatusCode = 709
-      break
-    default:
-      internalStatusCode = 708
-      break
-  }
-
-  return {
-    statusCode: 400,
-    headers: HEADERS,
-    body: JSON.stringify({ errorCode: internalStatusCode, errorId }),
-  }
-}
-```
+The shared `handleError` is the **single logging point** for the entire lambda. It generates an 8-hex-char errorId, calls `logger.errorResponse()` once, and maps errors to `errorCode`. No other file should call `logger` — doing so causes duplicate logs for every error that reaches `handleError`.
 
 Error codes: `702` bad request · `703` unauthorized · `704` forbidden · `705` not found · `706` method not allowed · `707` too many requests · `708` internal server error · `709` conflict · `710` accessToken expired.
 
@@ -657,20 +616,24 @@ export const findEmployee = async (
   companyId: string,
   tenantId: string
 ): Promise<Employee> => {
-  try {
-    const db = await getDb()
+  const db = await getDb()
 
-    const employee = await db.queryOne<Employee>(
-      'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
-      [employeeNumber, companyId, tenantId]
-    )
+  const employee = await db.queryOne<Employee>(
+    'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
+    [employeeNumber, companyId, tenantId]
+  )
 
-    if (!employee) throw new NotFoundError('Employee not found')
-    return employee
-  } catch (e) {
-    if (e instanceof NotFoundError) throw e
-    throw new Error(`Error on findEmployee: ${e}`)
+  if (!employee) {
+    throw new NotFoundError('Employee not found', {
+      file: 'lambdas/<LambdaName>/services/findEmployee.ts',
+      function: 'findEmployee',
+      operation: 'find active employee',
+      employeeNumber,
+      companyId,
+    })
   }
+
+  return employee
 }
 ```
 
@@ -679,15 +642,16 @@ Rules:
 - Use `db.queryOne<T>(sql, params)` for SELECT returning ≤1 row (returns `T | undefined`)
 - All column names are `snake_case` (e.g., `employee_number`, `company_id`, `is_active`)
 - Parameterize all user input with `$1`, `$2`, etc.
-- Wrap in `try/catch`, rethrow custom errors, wrap DB errors as `Error("Error on <functionName>: ...")`
+- **No try/catch in services** — throw custom errors for business logic failures, let DB/infrastructure errors bubble naturally to `handleError`
+- Never call `logger` in a service — `handleError` is the single logging point
 
 ---
 
 ## Code conventions (always enforce)
 
 - All functions use arrow function syntax: `export const fn = (...): ReturnType => { ... }` and `export const fn = async (...): Promise<ReturnType> => { ... }` — never `function` declarations
-- Every service function wraps its body in `try/catch`, rethrows custom errors (`ValidationError`, `NotFoundError`, `DuplicatedError`, `AuthError`) as-is, wraps unknown errors as `new Error("Error on <functionName>: " + e)`
+- Services do **not** wrap their body in `try/catch`. Throw custom errors (`NotFoundError`, `DuplicatedError`, etc.) for business logic failures. Let DB and infrastructure errors bubble naturally up to `handleError`.
 - Environment variable reads at module level always guard with `if (!varName) throw new Error(...)`
 - No comments unless the WHY is non-obvious
-- No trailing whitespace, no `console.log` (use `console.error` only in `handleError`)
+- No `console.*` calls anywhere — all logging goes through `logger.ts`. `handleError` is the only caller of `logger` and it does so exactly once per failed request. Adding `logger.error` inside a service creates duplicate logs.
 - Explicit return types on all functions (ESLint enforces this)

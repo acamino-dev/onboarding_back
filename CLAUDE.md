@@ -19,8 +19,9 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | `shared/db/types.ts` | TypeScript types for table rows: `Company`, `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
-| `shared/utils/handleError.ts` | Maps errors → HTTP 400 + obfuscated `{ errorCode, errorId }` response |
+| `shared/utils/handleError.ts` | Maps errors → HTTP 400 + obfuscated `{ errorCode, errorId }` response. **Single logging point** — calls `logger.errorResponse()` once per request. |
 | `shared/utils/secrets.ts` | Secrets Manager with in-memory cache — `getSecret(arn)` |
+| `shared/utils/logger.ts` | Logging — `logger.error(context, error, details?)` and `logger.errorResponse(errorId, errorCode, context, error, details?)`. Only called from `handleError`. |
 
 ## Error response format
 
@@ -70,6 +71,15 @@ pnpm deploy         # sam deploy --guided
 cd lambdas/<name> && npm test   # compile + unit tests for one lambda
 ```
 
+## Logging
+
+**Single logging point: `handleError`.**
+
+- `handleError` calls `logger.errorResponse()` once per failed request.
+- Services and utilities throw errors — they never call `logger`.
+- Adding `logger.error` inside a service or utility creates a duplicate log for every error that passes through `handleError`.
+- `logger.ts` is the only file with `console.*` calls.
+
 ## Testing conventions
 
 Every lambda test suite (`tests/unit/app.test.ts`) must cover these cases in addition to its business-logic scenarios:
@@ -79,7 +89,7 @@ Every lambda test suite (`tests/unit/app.test.ts`) must cover these cases in add
 | `DB_SECRET_ID` env var not set | `708` |
 | Each service function throws a generic DB error | `708` |
 
-**Pattern** — use `beforeEach` (not `beforeAll`) to reset mocks and env vars. Mock all service modules. Each service's DB error test simulates the wrapped error the service already produces: `new Error('Error on <fn>: ...')`. Do not mock `shared/utils/secrets` or `shared/db/client` — services are mocked so `getDb` is never called in unit tests.
+**Pattern** — use `beforeEach` (not `beforeAll`) to reset mocks and env vars. Mock all service modules. Each service's DB error test simulates a raw error: `new Error('connection timeout')`. Do not mock `shared/utils/secrets` or `shared/db/client` — services are mocked so `getDb` is never called in unit tests.
 
 The 708 cases are infrastructure-level and apply to every lambda by design. They are generated automatically by `/new-lambda` and must be preserved when tests are modified manually.
 

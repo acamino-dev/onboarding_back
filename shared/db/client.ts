@@ -16,7 +16,9 @@ export const getDb = async (): Promise<DB> => {
   if (db) return db
 
   const secretId = process.env.DB_SECRET_ID
-  if (!secretId) throw new Error('DB_SECRET_ID is not set')
+  if (!secretId) {
+    throw new Error('DB_SECRET_ID environment variable not set')
+  }
 
   const raw = await getSecret(secretId)
   const { user, password, host, port, dbname } = JSON.parse(raw) as {
