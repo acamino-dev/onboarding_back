@@ -22,6 +22,9 @@ stack_name = "onboarding-backend-dev"
 cached = true
 parallel = true
 
+[dev.local.parameters]
+parameter_overrides = "Environment=Dev"
+
 [dev.deploy.parameters]
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true

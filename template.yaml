@@ -29,6 +29,7 @@ Parameters:
     AllowedValues:
       - Dev
       - Prod
+    Default: Dev
   FrontendUrl:
     Type: String
     Description: Frontend URL for CORS
