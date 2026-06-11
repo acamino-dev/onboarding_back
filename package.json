@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "sam build",
+    "local": "sam local start-api --warm-containers EAGER --host 0.0.0.0 --port 4000 --config-env local --config-file samconfig.toml",
     "deploy": "sam deploy --guided",
     "migrate": "tsx scripts/migrate.ts",
     "reset-db": "NODE_ENV=dev tsx scripts/reset-db.ts"
@@ -26,6 +27,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1054.0",
+    "bcryptjs": "^3.0.3",
     "pg": "^8.13.0",
     "zod": "^3.24.0"
   }

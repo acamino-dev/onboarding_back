@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { getDb } from '../../../../shared/db/client'
 import { getSecret } from '../../../../shared/utils/secrets'
 import type { RequestBody } from '../types/RequestBody'

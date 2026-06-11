@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import type { User } from '../../../../../shared/db/types'
 import { getDb } from '../../../../../shared/db/client'
 import { createUser } from '../../services/createUser'

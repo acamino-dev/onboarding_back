@@ -49,8 +49,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: register-service
-      CodeUri: lambdas/auth/register/
-      Handler: app.lambdaHandler
+      CodeUri: ./
+      Handler: lambdas/auth/register/app.lambdaHandler
       Description: POST /auth/register - validates employee record and creates user account
       Environment:
         Variables:
@@ -79,7 +79,7 @@ Resources:
         Target: es2022
         Sourcemap: true
         EntryPoints:
-          - app.ts
+          - lambdas/auth/register/app.ts
         External:
           - "@aws-sdk/*"
 

@@ -10,11 +10,7 @@
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts",
     "seed:integration": "DB_SECRET_ID=onboardingCredentialsDev ts-node tests/integration/scripts/seed-integration.ts"
   },
-  "dependencies": {
-    "bcrypt": "^5.1.1"
-  },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.0",
     "@types/jest": "^29.0.0",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.0",
@@ -22,5 +18,8 @@
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
   }
 }

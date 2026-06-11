@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import { getDb } from '../../../../../../shared/db/client'
 import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID } from '../helpers/constants'
 
