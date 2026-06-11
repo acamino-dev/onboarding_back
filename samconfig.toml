@@ -42,4 +42,4 @@ capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "us-east-1"
-parameter_overrides = "Environment=Prod"
+parameter_overrides = "Environment=Prod FrontendUrl=https://credito.apoyoenelcamino.com.mx"

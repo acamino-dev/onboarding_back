@@ -29,6 +29,10 @@ Parameters:
     AllowedValues:
       - Dev
       - Prod
+  FrontendUrl:
+    Type: String
+    Description: Frontend URL for CORS
+    Default: http://localhost:3000
 
 Resources:
   AuthApi:
@@ -37,13 +41,16 @@ Resources:
       StageName: $default
       CorsConfiguration:
         AllowOrigins:
-          - "*"
+          - !Ref FrontendUrl
         AllowHeaders:
           - Content-Type
           - Authorization
+          - x-api-key
+          - X-Requested-With
         AllowMethods:
           - POST
           - OPTIONS
+        AllowCredentials: true
 
   RegisterFunction:
     Type: AWS::Serverless::Function
@@ -56,6 +63,7 @@ Resources:
         Variables:
           DB_SECRET_ID: !Sub onboardingCredentials${Environment}
           ONBOARDING_SALT_SECRET_ID: !Sub onboardingSalt${Environment}
+          FRONTEND_URL: !Ref FrontendUrl
       Policies:
         - Statement:
             - Effect: Allow
