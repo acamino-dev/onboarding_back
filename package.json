@@ -8,7 +8,7 @@
     "deploy:dev": "sam deploy --config-env dev",
     "migrate-db": "tsx scripts/migrate.ts",
     "reset-db": "NODE_ENV=dev tsx scripts/reset-db.ts",
-    "seed-db": "DB_SECRET_ID=onboardingCredentialsDev ts-node scripts/seed-integration.ts"
+    "seed-db": "DB_SECRET_ID=onboardingCredentialsDev ts-node scripts/seed-integration.ts && ts-node scripts/seed-companies.ts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.0",
