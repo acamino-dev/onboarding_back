@@ -7,7 +7,7 @@ if (!process.env.DB_SECRET_ID) {
   process.exit(1)
 }
 
-async function seed() {
+const seed = async (): Promise<void> => {
   console.log('Seeding integration test data...')
 
   try {
@@ -15,7 +15,7 @@ async function seed() {
 
     await db.query(
       'INSERT INTO companies (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [TEST_COMPANY_ID, 'Integration Test Company']
+      [TEST_COMPANY_ID, 'Apoyo en el Camino']
     )
 
     for (const [key, emp] of Object.entries(EMPLOYEES)) {

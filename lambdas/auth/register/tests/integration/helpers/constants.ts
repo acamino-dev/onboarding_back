@@ -1,10 +1,10 @@
-export const TEST_COMPANY_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12'
+export const TEST_COMPANY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 
 export const EMPLOYEES = {
   active: {
     id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13',
-    employeeNumber: 'INT001',
-    rfc: 'GOAA970101AB1',
+    employeeNumber: '1010',
+    rfc: 'GOGE9702076TA',
     email: 'john.doe@integrationtest.com',
   },
   inactive: {
