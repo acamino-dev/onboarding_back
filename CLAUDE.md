@@ -79,7 +79,7 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 
 ```bash
 pnpm build          # sam build (all lambdas)
-pnpm deploy         # sam deploy --guided
+pnpm deploy:dev     # sam deploy --config-env dev
 cd lambdas/<name> && npm test   # compile + unit tests for one lambda
 npx ts-node scripts/seed-companies.ts  # seed initial companies (set ENVIRONMENT env var)
 ```

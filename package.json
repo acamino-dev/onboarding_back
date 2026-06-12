@@ -5,7 +5,7 @@
   "scripts": {
     "build": "sam build",
     "local": "sam local start-api --warm-containers EAGER --host 0.0.0.0 --port 4000 --config-env local --config-file samconfig.toml",
-    "deploy": "sam deploy --guided",
+    "deploy:dev": "sam deploy --config-env dev",
     "migrate-db": "tsx scripts/migrate.ts",
     "reset-db": "NODE_ENV=dev tsx scripts/reset-db.ts",
     "seed-db": "DB_SECRET_ID=onboardingCredentialsDev ts-node scripts/seed-integration.ts"

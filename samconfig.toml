@@ -1,22 +1,8 @@
 version = 0.1
 
-[default]
-[default.global.parameters]
-stack_name = "onboarding-backend"
-
-[default.build.parameters]
-cached = true
-parallel = true
-
-[default.deploy.parameters]
-capabilities = "CAPABILITY_IAM"
-confirm_changeset = true
-resolve_s3 = true
-region = "us-east-1"
-
 [dev]
 [dev.global.parameters]
-stack_name = "onboarding-backend-dev"
+stack_name = "acamino-onboarding-dev"
 
 [dev.build.parameters]
 cached = true
@@ -30,11 +16,11 @@ capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "us-east-1"
-parameter_overrides = "Environment=Dev"
+parameter_overrides = "Environment=Dev LambdaSubnetIds=subnet-0b0abc2587fd5eb54 LambdaSecurityGroupIds=sg-02460aaaf2d9e95a0"
 
 [prod]
 [prod.global.parameters]
-stack_name = "onboarding-backend-prod"
+stack_name = "acamino-onboarding-prod"
 
 [prod.build.parameters]
 cached = true
@@ -45,4 +31,4 @@ capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "us-east-1"
-parameter_overrides = "Environment=Prod FrontendUrl=https://credito.apoyoenelcamino.com.mx"
+parameter_overrides = "Environment=Prod LambdaSubnetIds=subnet-0b0abc2587fd5eb54 LambdaSecurityGroupIds=sg-02460aaaf2d9e95a0 FrontendUrl=https://credito.apoyoenelcamino.com.mx"
