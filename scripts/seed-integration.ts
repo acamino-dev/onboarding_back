@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
-import { getDb } from '../../../../../../shared/db/client'
-import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID } from '../helpers/constants'
+import { getDb } from '../shared/db/client'
+import { EMPLOYEES, SEEDED_USER_ID, TEST_COMPANY_ID } from './constants'
 
 if (!process.env.DB_SECRET_ID) {
   console.error('DB_SECRET_ID is not set')
@@ -33,13 +33,14 @@ const seed = async (): Promise<void> => {
 
     const passwordHash = await bcrypt.hash('TestSeed123!', 10)
     await db.query(
-      'INSERT INTO users (id, employee_id, company_id, email, password_hash) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+      'INSERT INTO users (id, employee_id, company_id, email, password_hash, otp_verified) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING',
       [
         SEEDED_USER_ID,
         EMPLOYEES.withUser.id,
         TEST_COMPANY_ID,
         EMPLOYEES.withUser.email,
         passwordHash,
+        false,
       ]
     )
 

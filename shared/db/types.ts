@@ -19,6 +19,7 @@ export interface User {
   company_id: string
   email: string
   password_hash: string
+  otp_verified: boolean
   created_at: Date
   updated_at: Date
 }

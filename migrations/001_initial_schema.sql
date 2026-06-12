@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   company_id UUID NOT NULL REFERENCES companies(id),
   email VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  otp_verified BOOLEAN DEFAULT FALSE NOT NULL,
   created_at TIMESTAMP DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMP DEFAULT NOW() NOT NULL
 );
