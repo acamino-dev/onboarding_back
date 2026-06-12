@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: sendOTP
+  version: 1.0.0
+
+paths:
+  /auth/sendOTP:
+    post:
+      summary: Generate and send a 6-digit OTP to the user's email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OTP sent
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (invalid email format or missing field)
+            704 – forbidden (user already otp_verified)
+            705 – not found (email not registered)
+            707 – too many requests (OTP sent less than 1 minute ago)
+            708 – internal server error
+          enum: [702, 704, 705, 707, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
+          example: a1b2c3d4

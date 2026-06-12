@@ -170,6 +170,57 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  SendOTPFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingSendOTP${Environment}
+      CodeUri: ./
+      Handler: lambdas/auth/sendOTP/app.lambdaHandler
+      Description: POST /auth/sendOTP - generates and sends OTP to user email
+      Environment:
+        Variables:
+          DB_SECRET_ID: !Sub onboardingCredentials${Environment}
+          OTP_TABLE_NAME: !Sub onboardingOtpDB${Environment}
+          SES_FROM_EMAIL: no-reply@apoyoenelcamino.com.mx
+          FRONTEND_URL: !Ref FrontendUrl
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingCredentials${Environment}-*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt OtpTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: "*"
+        - VPCAccessPolicy: {}
+      Events:
+        SendOTP:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Path: /auth/sendOTP
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/auth/sendOTP/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
