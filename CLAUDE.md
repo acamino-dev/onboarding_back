@@ -5,18 +5,25 @@ Auth module for the onboarding platform. Validates employees against HR data and
 ## Stack
 
 - Runtime: Node 22, TypeScript strict mode
-- DB: Raw SQL + `pg` (PostgreSQL — credentials from Secrets Manager)
+- DB: PostgreSQL (employees, users, auth) + DynamoDB (companies)
 - Validation: Zod
 - Auth: bcrypt
 - Infra: AWS SAM — `template.yaml` at root
 - Package manager: pnpm (workspaces)
+
+## TypeScript rules
+
+- All functions must have explicit return types
+- `any` is not permitted — use specific types or `unknown` with guards
+- No semicolons (`;`) — configured in ESLint/Prettier
 
 ## Shared utilities (`shared/`)
 
 | Path | Purpose |
 |---|---|
 | `shared/db/client.ts` | Async `getDb()` — fetches credentials from Secrets Manager via `DB_SECRET_ID` env var, creates memoized Pool (max=1), exposes `query()` and `queryOne()` |
-| `shared/db/types.ts` | TypeScript types for table rows: `Company`, `Employee`, `User`, `PasswordResetToken` |
+| `shared/db/dynamodb.ts` | DynamoDB DocumentClient wrapper — `dynamoDb.get()`, `dynamoDb.query()`, `dynamoDb.scan()`, `dynamoDb.put()`, `dynamoDb.update()`. Type: `Company = { id, name, created_at }` |
+| `shared/db/types.ts` | TypeScript types for PostgreSQL table rows: `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
 | `shared/utils/handleError.ts` | Maps errors → HTTP 400 + obfuscated `{ errorCode, errorId }` response. **Single logging point** — calls `logger.errorResponse()` once per request. |
@@ -49,18 +56,23 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 
 ## Migrations & Schema
 
-- Schema defined in `migrations/001_initial_schema.sql`
-- Tables: `companies`, `employees`, `users`, `password_reset_tokens`
-- All column names use `snake_case` (e.g., `employee_number`, `company_id`)
+- PostgreSQL schema defined in `migrations/001_initial_schema.sql`
+- PostgreSQL tables: `employees`, `users`, `password_reset_tokens`
+- All PostgreSQL column names use `snake_case` (e.g., `employee_number`, `company_id`)
 - Query examples: `db.query(sql, [param1, param2])` returns `{ rows: T[] }`, `db.queryOne(sql, params)` returns `T | undefined`
+- DynamoDB table `onboardingCompaniesDB${Environment}` defined in `template.yaml` (CompaniesTable resource)
+- Companies schema: `{ id (PK, string), name (string), created_at (number, unix timestamp) }`
 
 ## SAM specifics
 
 - All functions: `arm64`, `nodejs22.x`, 30s timeout, 256MB, VPC-attached
 - Build: esbuild per function (`BuildMethod: esbuild`), `@aws-sdk/*` marked external
 - CORS handled at API Gateway level — lambdas do not set CORS headers
-- DB secret ID injected via SAM `!Sub onboardingCredentials${Environment}` → env var `DB_SECRET_ID`
+- PostgreSQL secret ID injected via SAM `!Sub onboardingCredentials${Environment}` → env var `DB_SECRET_ID`
+- Companies table name injected via SAM → env var `COMPANIES_TABLE_NAME`
 - IAM policy grants `secretsmanager:GetSecretValue` on `onboardingCredentials${Environment}-*`
+- IAM policy grants `dynamodb:GetItem`, `dynamodb:Scan` on companies table
+- DynamoDB companies table uses on-demand billing (PAY_PER_REQUEST) — suitable for high read, low write
 - Deploy with `sam deploy --config-env dev` or `--config-env prod`
 
 ## Commands
@@ -69,6 +81,7 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 pnpm build          # sam build (all lambdas)
 pnpm deploy         # sam deploy --guided
 cd lambdas/<name> && npm test   # compile + unit tests for one lambda
+npx ts-node scripts/seed-companies.ts  # seed initial companies (set ENVIRONMENT env var)
 ```
 
 ## Service error handling
