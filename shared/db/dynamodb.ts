@@ -1,6 +1,9 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import {
   DynamoDBDocumentClient,
+  DeleteCommand,
+  DeleteCommandInput,
+  DeleteCommandOutput,
   GetCommand,
   GetCommandInput,
   GetCommandOutput,
@@ -32,6 +35,8 @@ export const dynamoDb = {
     documentClient.send(new PutCommand(params)),
   update: (params: UpdateCommandInput): Promise<UpdateCommandOutput> =>
     documentClient.send(new UpdateCommand(params)),
+  delete: (params: DeleteCommandInput): Promise<DeleteCommandOutput> =>
+    documentClient.send(new DeleteCommand(params)),
 }
 
 export type Company = {

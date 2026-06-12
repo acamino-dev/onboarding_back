@@ -22,7 +22,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | Path | Purpose |
 |---|---|
 | `shared/db/client.ts` | Async `getDb()` — fetches credentials from Secrets Manager via `DB_SECRET_ID` env var, creates memoized Pool (max=1), exposes `query()` and `queryOne()` |
-| `shared/db/dynamodb.ts` | DynamoDB DocumentClient wrapper — `dynamoDb.get()`, `dynamoDb.query()`, `dynamoDb.scan()`, `dynamoDb.put()`, `dynamoDb.update()`. Type: `Company = { id, name, created_at }` |
+| `shared/db/dynamodb.ts` | DynamoDB DocumentClient wrapper — `dynamoDb.get()`, `dynamoDb.query()`, `dynamoDb.scan()`, `dynamoDb.put()`, `dynamoDb.update()`, `dynamoDb.delete()`. Type: `Company = { id, name, created_at }` |
 | `shared/db/types.ts` | TypeScript types for PostgreSQL table rows: `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
@@ -65,7 +65,7 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 
 ## SAM specifics
 
-- All functions: `arm64`, `nodejs22.x`, 30s timeout, 256MB, VPC-attached
+- All functions: `x86_64`, `nodejs22.x`, 30s timeout, 256MB, VPC-attached
 - Build: esbuild per function (`BuildMethod: esbuild`), `@aws-sdk/*` marked external
 - CORS handled at API Gateway level — lambdas do not set CORS headers
 - PostgreSQL secret ID injected via SAM `!Sub onboardingCredentials${Environment}` → env var `DB_SECRET_ID`

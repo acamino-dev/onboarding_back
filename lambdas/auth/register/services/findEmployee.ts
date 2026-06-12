@@ -1,14 +1,23 @@
 import { NotFoundError } from '../../../../shared/constants/errors'
 import { getDb } from '../../../../shared/db/client'
+import { dynamoDb } from '../../../../shared/db/dynamodb'
 import type { Employee } from '../../../../shared/db/types'
 
 export const findEmployee = async (employeeNumber: string, companyId: string, rfc: string): Promise<Employee> => {
+  const tableName = process.env.COMPANIES_TABLE_NAME
+  if (!tableName) {
+    throw new Error('COMPANIES_TABLE_NAME environment variable not set')
+  }
+
   const db = await getDb()
 
   try {
-    const company = await db.queryOne<{ id: string }>('SELECT id FROM companies WHERE id = $1', [companyId])
+    const result = await dynamoDb.get({
+      TableName: tableName,
+      Key: { id: companyId },
+    })
 
-    if (!company) {
+    if (!result.Item) {
       throw new NotFoundError('Company not found', {
         file: 'lambdas/auth/register/services/findEmployee.ts',
         function: 'findEmployee',

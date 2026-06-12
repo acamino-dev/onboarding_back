@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["node", "jest"]
   },
-  "include": ["../../../shared/**/*.ts", "**/*.ts"],
+  "include": ["../../../shared/**/*.ts", "../../../scripts/**/*.ts", "**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

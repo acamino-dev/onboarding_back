@@ -13,11 +13,6 @@ const seed = async (): Promise<void> => {
   try {
     const db = await getDb()
 
-    await db.query(
-      'INSERT INTO companies (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [TEST_COMPANY_ID, 'Apoyo en el Camino']
-    )
-
     for (const [key, emp] of Object.entries(EMPLOYEES)) {
       await db.query(
         'INSERT INTO employees (id, employee_number, rfc, company_id, is_active) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',

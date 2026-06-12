@@ -1,6 +1,23 @@
 import { NotFoundError } from '../../../../../shared/constants/errors'
+import { dynamoDb } from '../../../../../shared/db/dynamodb'
 import { findEmployee } from '../../services/findEmployee'
-import { EMPLOYEES, TEST_COMPANY_ID } from './helpers/constants'
+import { EMPLOYEES, TEST_COMPANY_ID } from '../../../../../scripts/constants'
+
+const TABLE_NAME = process.env.COMPANIES_TABLE_NAME as string
+
+beforeAll(async () => {
+  await dynamoDb.put({
+    TableName: TABLE_NAME,
+    Item: { id: TEST_COMPANY_ID, name: 'Test Company', created_at: Date.now() },
+  })
+})
+
+afterAll(async () => {
+  await dynamoDb.delete({
+    TableName: TABLE_NAME,
+    Key: { id: TEST_COMPANY_ID },
+  })
+})
 
 describe('findEmployee integration', () => {
   it('returns the employee on happy path', async () => {

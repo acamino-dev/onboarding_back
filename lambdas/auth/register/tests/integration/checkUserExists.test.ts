@@ -1,6 +1,6 @@
 import { DuplicatedError } from '../../../../../shared/constants/errors'
 import { checkUserExists } from '../../services/checkUserExists'
-import { EMPLOYEES } from './helpers/constants'
+import { EMPLOYEES } from '../../../../../scripts/constants'
 
 describe('checkUserExists integration', () => {
   it('resolves without error when email is not registered', async () => {
