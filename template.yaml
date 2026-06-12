@@ -50,6 +50,25 @@ Resources:
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
 
+  OtpTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub onboardingOtpDB${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: otp_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        - AttributeName: otp_id
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+
   AuthApi:
     Type: AWS::Serverless::HttpApi
     Properties:

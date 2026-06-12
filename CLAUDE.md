@@ -5,7 +5,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 ## Stack
 
 - Runtime: Node 22, TypeScript strict mode
-- DB: PostgreSQL (employees, users, auth) + DynamoDB (companies)
+- DB: PostgreSQL (employees, users, auth) + DynamoDB (companies, otp)
 - Validation: Zod
 - Auth: bcrypt
 - Infra: AWS SAM — `template.yaml` at root
@@ -22,7 +22,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | Path | Purpose |
 |---|---|
 | `shared/db/client.ts` | Async `getDb()` — fetches credentials from Secrets Manager via `DB_SECRET_ID` env var, creates memoized Pool (max=1), exposes `query()` and `queryOne()` |
-| `shared/db/dynamodb.ts` | DynamoDB DocumentClient wrapper — `dynamoDb.get()`, `dynamoDb.query()`, `dynamoDb.scan()`, `dynamoDb.put()`, `dynamoDb.update()`, `dynamoDb.delete()`. Type: `Company = { id, name, created_at }` |
+| `shared/db/dynamodb.ts` | DynamoDB DocumentClient wrapper — `dynamoDb.get()`, `dynamoDb.query()`, `dynamoDb.scan()`, `dynamoDb.put()`, `dynamoDb.update()`, `dynamoDb.delete()`. Types: `Company = { id, name, created_at }`, `Otp = { email, otp_id, code, expires_at, used }` |
 | `shared/db/types.ts` | TypeScript types for PostgreSQL table rows: `Employee`, `User`, `PasswordResetToken` |
 | `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
@@ -62,6 +62,10 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 - Query examples: `db.query(sql, [param1, param2])` returns `{ rows: T[] }`, `db.queryOne(sql, params)` returns `T | undefined`
 - DynamoDB table `onboardingCompaniesDB${Environment}` defined in `template.yaml` (CompaniesTable resource)
 - Companies schema: `{ id (PK, string), name (string), created_at (number, unix timestamp) }`
+- DynamoDB table `onboardingOtpDB${Environment}` defined in `template.yaml` (OtpTable resource)
+- OTP schema: `{ email (PK, string), otp_id (SK, string UUID), code (string, 6-digit numeric), expires_at (number, unix timestamp — TTL), used (boolean) }`
+- OTP TTL: DynamoDB auto-deletes records via `expires_at` (15 min from creation)
+- OTP access pattern: query by `email` (PK) → filter by `code` match + `used = false` in app
 
 ## SAM specifics
 
@@ -70,9 +74,11 @@ Every lambda receives `DB_SECRET_ID` as env var (set in `template.yaml` via `!Su
 - CORS handled at API Gateway level — lambdas do not set CORS headers
 - PostgreSQL secret ID injected via SAM `!Sub onboardingCredentials${Environment}` → env var `DB_SECRET_ID`
 - Companies table name injected via SAM → env var `COMPANIES_TABLE_NAME`
+- OTP table name injected via SAM → env var `OTP_TABLE_NAME`
 - IAM policy grants `secretsmanager:GetSecretValue` on `onboardingCredentials${Environment}-*`
 - IAM policy grants `dynamodb:GetItem`, `dynamodb:Scan` on companies table
-- DynamoDB companies table uses on-demand billing (PAY_PER_REQUEST) — suitable for high read, low write
+- IAM policy grants `dynamodb:PutItem`, `dynamodb:Query`, `dynamodb:UpdateItem` on OTP table
+- DynamoDB tables use on-demand billing (PAY_PER_REQUEST)
 - Deploy with `sam deploy --config-env dev` or `--config-env prod`
 
 ## Commands
