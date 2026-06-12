@@ -3,7 +3,5 @@ export type RequestBody = {
   company_id: string
   rfc: string
   email: string
-  first_name: string
-  last_name: string
   password: string
 }

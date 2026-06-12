@@ -59,12 +59,12 @@ cd lambdas/<name> && npm test       # compile + unit tests for one lambda
 
 Four tables, all in PostgreSQL (schema in `migrations/001_initial_schema.sql`):
 
-- **companies** — `id`, `name`, `tenant_id`, `created_at`
-- **employees** — `id`, `employee_number`, `rfc`, `company_id`, `tenant_id`, `first_name`, `last_name`, `email`, `is_active`, `created_at`
-- **users** — `id`, `employee_id`, `company_id`, `tenant_id`, `email`, `password_hash`, `is_active`, `created_at`, `updated_at`
-- **password_reset_tokens** — `id`, `user_id`, `token`, `tenant_id`, `expires_at`, `created_at`
+- **companies** — `id`, `name`, `created_at`
+- **employees** — `id`, `employee_number`, `rfc`, `company_id`, `is_active`, `created_at`
+- **users** — `id`, `employee_id`, `company_id`, `email`, `password_hash`, `created_at`, `updated_at`
+- **password_reset_tokens** — `id`, `user_id`, `token`, `expires_at`, `created_at`
 
-Connection string lives in Secrets Manager. Every lambda reads `DB_SECRET_ARN` → `getSecret(arn)` → parses `{ connectionString }` → passes to `getDb(connectionString)`.
+Credentials live in Secrets Manager. Every lambda reads `DB_SECRET_ID` → `getSecret(id)` → parses `{ user, password, host, port, dbname }` → memoized Pool (max=1).
 
 ## Error response format
 
@@ -117,28 +117,25 @@ Validates an employee and creates a user account.
 
 **Flow:**
 1. Parse + validate request body (Zod)
-2. Fetch DB connection string from Secrets Manager
-3. Verify company exists for `(company_id, tenant_id)`
-4. Find active employee by `(employee_number, company_id, tenant_id)`
-5. Cross-check `rfc` against employee record (case-insensitive)
-6. Assert no existing user for this employee
-7. Hash password (bcrypt, 10 rounds) and insert user row
+2. Find active employee by `(employee_number, company_id, rfc)` — verifies company exists, employee is active, RFC matches
+3. Assert no existing user with this email
+4. Hash password (bcrypt, 10 rounds + pepper from Secrets Manager) and insert user row
 
 **Request body:**
 
 | Field | Type | Constraints |
 |---|---|---|
 | `employee_number` | string | 1–100 chars |
-| `rfc` | string | exactly 13 chars |
 | `company_id` | string (UUID) | valid UUID |
-| `tenant_id` | string (UUID) | valid UUID |
+| `rfc` | string | exactly 13 chars |
+| `email` | string | valid email |
 | `password` | string | 8–72 chars |
 
 **Success:** `201` `{ "message": "Account created successfully" }`
 
 **Errors:** `702` validation · `705` company/employee not found · `709` user already exists · `708` unexpected failure
 
-Full OpenAPI spec: [`docs/register-service.yaml`](docs/register-service.yaml)
+Full OpenAPI spec: [`docs/auth/register.yaml`](docs/auth/register.yaml)
 
 ## Adding a new lambda
 

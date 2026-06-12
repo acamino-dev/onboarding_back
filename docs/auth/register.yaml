@@ -40,8 +40,6 @@ components:
         - company_id
         - rfc
         - email
-        - first_name
-        - last_name
         - password
       properties:
         employee_number:
@@ -62,16 +60,6 @@ components:
           type: string
           format: email
           description: Email address for the new account — must be unique across all users
-        first_name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          description: User's first name
-        last_name:
-          type: string
-          minLength: 1
-          maxLength: 255
-          description: User's last name
         password:
           type: string
           minLength: 8

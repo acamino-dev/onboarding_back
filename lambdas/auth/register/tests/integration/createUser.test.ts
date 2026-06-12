@@ -14,8 +14,6 @@ const testBody = {
   company_id: TEST_COMPANY_ID,
   rfc: EMPLOYEES.forCreate.rfc,
   email: EMPLOYEES.forCreate.email,
-  first_name: EMPLOYEES.forCreate.firstName,
-  last_name: EMPLOYEES.forCreate.lastName,
   password: 'IntegrationPass123!',
 }
 
@@ -33,8 +31,6 @@ describe('createUser integration', () => {
 
     expect(inserted).toBeDefined()
     expect(inserted?.email).toBe(EMPLOYEES.forCreate.email)
-    expect(inserted?.first_name).toBe(EMPLOYEES.forCreate.firstName)
-    expect(inserted?.last_name).toBe(EMPLOYEES.forCreate.lastName)
     expect(inserted?.company_id).toBe(TEST_COMPANY_ID)
     expect(inserted?.password_hash).toBeDefined()
   })

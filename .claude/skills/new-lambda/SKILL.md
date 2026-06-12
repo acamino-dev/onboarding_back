@@ -614,26 +614,30 @@ import { getDb } from '../../../shared/db/client'
 export const findEmployee = async (
   employeeNumber: string,
   companyId: string,
-  tenantId: string
 ): Promise<Employee> => {
   const db = await getDb()
 
-  const employee = await db.queryOne<Employee>(
-    'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND tenant_id = $3 AND is_active = TRUE',
-    [employeeNumber, companyId, tenantId]
-  )
+  try {
+    const employee = await db.queryOne<Employee>(
+      'SELECT * FROM employees WHERE employee_number = $1 AND company_id = $2 AND is_active = TRUE',
+      [employeeNumber, companyId]
+    )
 
-  if (!employee) {
-    throw new NotFoundError('Employee not found', {
-      file: 'lambdas/<LambdaName>/services/findEmployee.ts',
-      function: 'findEmployee',
-      operation: 'find active employee',
-      employeeNumber,
-      companyId,
-    })
+    if (!employee) {
+      throw new NotFoundError('Employee not found', {
+        file: 'lambdas/<LambdaName>/services/findEmployee.ts',
+        function: 'findEmployee',
+        operation: 'find active employee',
+        employeeNumber,
+        companyId,
+      })
+    }
+
+    return employee
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error
+    throw new Error(`Error on findEmployee: ${error instanceof Error ? error.message : String(error)}`)
   }
-
-  return employee
 }
 ```
 
@@ -642,7 +646,7 @@ Rules:
 - Use `db.queryOne<T>(sql, params)` for SELECT returning ≤1 row (returns `T | undefined`)
 - All column names are `snake_case` (e.g., `employee_number`, `company_id`, `is_active`)
 - Parameterize all user input with `$1`, `$2`, etc.
-- **No try/catch in services** — throw custom errors for business logic failures, let DB/infrastructure errors bubble naturally to `handleError`
+- **Wrap DB operations in try/catch** — re-throw domain errors directly, wrap raw DB errors as `Error on <serviceName>: <message>` (see pattern below)
 - Never call `logger` in a service — `handleError` is the single logging point
 
 ---
@@ -650,7 +654,7 @@ Rules:
 ## Code conventions (always enforce)
 
 - All functions use arrow function syntax: `export const fn = (...): ReturnType => { ... }` and `export const fn = async (...): Promise<ReturnType> => { ... }` — never `function` declarations
-- Services do **not** wrap their body in `try/catch`. Throw custom errors (`NotFoundError`, `DuplicatedError`, etc.) for business logic failures. Let DB and infrastructure errors bubble naturally up to `handleError`.
+- Services wrap DB operations in `try/catch`. Re-throw domain errors (`NotFoundError`, `DuplicatedError`, etc.) directly. Wrap raw DB/infrastructure errors as `Error on <serviceName>: <message>` — this is what the unit test infrastructure tests assert against (`/Error on <fn>/`).
 - Environment variable reads at module level always guard with `if (!varName) throw new Error(...)`
 - No comments unless the WHY is non-obvious
 - No `console.*` calls anywhere — all logging goes through `logger.ts`. `handleError` is the only caller of `logger` and it does so exactly once per failed request. Adding `logger.error` inside a service creates duplicate logs.

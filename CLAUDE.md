@@ -71,6 +71,14 @@ pnpm deploy         # sam deploy --guided
 cd lambdas/<name> && npm test   # compile + unit tests for one lambda
 ```
 
+## Service error handling
+
+Every service wraps its DB operations in `try/catch`:
+- Domain errors (`NotFoundError`, `DuplicatedError`, etc.) — re-throw directly
+- Raw DB/infrastructure errors — wrap as `Error on <serviceName>: <original message>`
+
+This is what the unit test 708 cases assert: `mockX.mockRejectedValue(new Error('Error on X: connection timeout'))`.
+
 ## Logging
 
 **Single logging point: `handleError`.**
