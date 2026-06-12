@@ -441,7 +441,8 @@ Rules:
 After creating all files, add the Lambda resource to `template.yaml` following the existing pattern. Key sections to add:
 
 1. **Lambda function resource** under `Resources:` — copy an existing similar Lambda block and adapt:
-   - `FunctionName`
+   - Resource key: `<PascalCaseName>Function` — e.g. `GetCompaniesFunction`, `RegisterFunction`
+   - `FunctionName: !Sub onboarding<PascalCaseName>${Environment}` — e.g. `!Sub onboardingGetCompanies${Environment}`, `!Sub onboardingRegister${Environment}`
    - `Handler` path
    - `Events` (API Gateway path and method)
    - `Environment` → `Variables`: always include `DB_SECRET_ID: !Sub onBoardingCredentials${Environment}` plus any extra vars
