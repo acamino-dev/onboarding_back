@@ -119,8 +119,6 @@ lambdas/<LambdaName>/
 │   └── integration/
 │       ├── helpers/
 │       │   └── constants.ts
-│       ├── scripts/
-│       │   └── seed-integration.ts
 │       └── <serviceName>.test.ts  (one file per service)
 ├── jest.config.ts
 ├── jest.integration.config.ts
@@ -295,8 +293,7 @@ export default {
     "lint": "eslint '*.ts' --quiet --fix",
     "compile": "tsc",
     "test": "npm run compile && npm run unit && npm run test:integration",
-    "test:integration": "jest --config jest.integration.config.ts",
-    "seed:integration": "ts-node tests/integration/scripts/seed-integration.ts"
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts"
   },
   "dependencies": {},
   "devDependencies": {
@@ -349,46 +346,29 @@ Rules:
 
 ---
 
-### `tests/integration/scripts/seed-integration.ts`
+### Integration test data setup
 
-Inserts all fixture data needed by the integration suite. Must be idempotent — use `ON CONFLICT DO NOTHING`.
+**DynamoDB data** — always use `beforeAll`/`afterAll` inside the test file. Do NOT create a seed script.
 
 ```typescript
-import { getDb } from '../../../../../shared/db/client'
-import { /* constants */ } from '../helpers/constants'
-
-if (!process.env.DB_SECRET_ID) {
-  console.error('DB_SECRET_ID is not set')
-  process.exit(1)
-}
-
-const seed = async (): Promise<void> => {
-  console.log('Seeding integration test data...')
-
-  try {
-    const db = await getDb()
-
-    // Insert prerequisite rows first (e.g. companies before employees, employees before users)
-    // Always use ON CONFLICT DO NOTHING for idempotency
-    await db.query(
-      'INSERT INTO <table> (...) VALUES (...) ON CONFLICT DO NOTHING',
-      [/* values from constants */]
+beforeAll(async () => {
+  await Promise.all(
+    Object.values(TEST_ENTITIES).map((item) =>
+      dynamoDb.put({ TableName: TABLE_NAME, Item: { ...item, created_at: Math.floor(Date.now() / 1000) } })
     )
+  )
+})
 
-    // Repeat for each fixture row
-
-    console.log('Done.')
-    process.exit(0)
-  } catch (e) {
-    console.error('Seed error:', e)
-    process.exit(1)
-  }
-}
-
-seed()
+afterAll(async () => {
+  await Promise.all(
+    Object.values(TEST_ENTITIES).map((item) =>
+      dynamoDb.delete({ TableName: TABLE_NAME, Key: { id: item.id } })
+    )
+  )
+})
 ```
 
-Run before the suite: `npm run seed:integration` (requires `DB_SECRET_ID` in env).
+**PostgreSQL static fixtures** (employees, users that must pre-exist before tests run) — these are NOT managed in `beforeAll`/`afterAll` because they are shared across multiple lambdas. They live in `scripts/seed-integration.ts` at the project root and are run once: `npm run seed-db`. Do not create a per-lambda seed script for PG data.
 
 ---
 
@@ -412,8 +392,17 @@ import { getDb } from '../../../../shared/db/client'
 import { <serviceFunction> } from '../../services/<serviceName>'
 import { /* constants */ } from './helpers/constants'
 
+// For DynamoDB-backed services: seed and clean up in beforeAll/afterAll
+beforeAll(async () => {
+  await dynamoDb.put({ TableName: TABLE_NAME, Item: { ...TEST_ENTITY, created_at: Math.floor(Date.now() / 1000) } })
+})
+
+afterAll(async () => {
+  await dynamoDb.delete({ TableName: TABLE_NAME, Key: { id: TEST_ENTITY.id } })
+})
+
 describe('<serviceName> integration', () => {
-  // For write services: clean up inserted rows after each test
+  // For write services against PostgreSQL: clean up inserted rows after each test
   afterEach(async () => {
     const db = await getDb()
     await db.query('DELETE FROM <table> WHERE <condition>', [/* fixture id */])
@@ -438,6 +427,8 @@ describe('<serviceName> integration', () => {
 ```
 
 Rules:
+- DynamoDB data → `beforeAll`/`afterAll` in the test file. Never a separate seed script.
+- PostgreSQL static fixtures (employees, users) → already seeded via `npm run seed-db` (project root). Tests assume they exist.
 - `afterEach` cleanup only on write services (INSERT/UPDATE/DELETE) — SELECT services need none
 - Assert DB state directly with `db.queryOne` for INSERT tests — don't trust the function's return alone
 - Use fixture constants for all IDs, never inline raw UUIDs in test bodies

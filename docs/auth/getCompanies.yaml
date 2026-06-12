@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: getCompanies
+  version: 1.0.0
+
+paths:
+  /auth/getCompanies:
+    post:
+      summary: Returns all companies available for employee registration
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        companies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Company'
+
+    Company:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            708 – internal server error (DynamoDB failure or misconfigured environment)
+          enum: [708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'

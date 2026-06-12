@@ -114,6 +114,43 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  GetCompaniesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingGetCompanies${Environment}
+      CodeUri: ./
+      Handler: lambdas/auth/getCompanies/app.lambdaHandler
+      Description: POST /auth/getCompanies - returns all companies from DynamoDB
+      Environment:
+        Variables:
+          FRONTEND_URL: !Ref FrontendUrl
+          COMPANIES_TABLE_NAME: !Sub onboardingCompaniesDB${Environment}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt CompaniesTable.Arn
+        - VPCAccessPolicy: {}
+      Events:
+        GetCompanies:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Path: /auth/getCompanies
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/auth/getCompanies/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
@@ -121,3 +158,6 @@ Outputs:
   RegisterFunctionArn:
     Description: Register Lambda ARN
     Value: !GetAtt RegisterFunction.Arn
+  GetCompaniesFunctionArn:
+    Description: GetCompanies Lambda ARN
+    Value: !GetAtt GetCompaniesFunction.Arn
