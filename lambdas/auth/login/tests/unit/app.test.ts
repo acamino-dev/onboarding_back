@@ -5,18 +5,21 @@ import { storeRefreshToken } from '../../services/storeRefreshToken'
 import { signAccessToken } from '../../services/signAccessToken'
 import { generateRefreshToken } from '../../utils/generateRefreshToken'
 import { comparePassword } from '../../utils/comparePassword'
+import { getSecret } from '../../../../../shared/utils/secrets'
 
 jest.mock('../../services/findUserByEmail')
 jest.mock('../../services/storeRefreshToken')
 jest.mock('../../services/signAccessToken')
 jest.mock('../../utils/generateRefreshToken')
 jest.mock('../../utils/comparePassword')
+jest.mock('../../../../../shared/utils/secrets')
 
 const mockFindUserByEmail = findUserByEmail as jest.MockedFunction<typeof findUserByEmail>
 const mockStoreRefreshToken = storeRefreshToken as jest.MockedFunction<typeof storeRefreshToken>
 const mockSignAccessToken = signAccessToken as jest.MockedFunction<typeof signAccessToken>
 const mockGenerateRefreshToken = generateRefreshToken as jest.MockedFunction<typeof generateRefreshToken>
 const mockComparePassword = comparePassword as jest.MockedFunction<typeof comparePassword>
+const mockGetSecret = getSecret as jest.MockedFunction<typeof getSecret>
 
 const MOCK_USER = {
   id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
@@ -38,7 +41,9 @@ describe('login', () => {
     process.env.DB_SECRET_ID = 'onBoardingCredentialsDev'
     process.env.JWT_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:onboardingJWTDev'
     process.env.REFRESH_TOKENS_TABLE_NAME = 'onboardingRefreshTokensDBDev'
+    process.env.ONBOARDING_SALT_SECRET_ID = 'onboardingSaltDev'
 
+    mockGetSecret.mockResolvedValue(JSON.stringify({ salt: 'test-pepper-salt' }))
     mockFindUserByEmail.mockResolvedValue(MOCK_USER)
     mockComparePassword.mockResolvedValue(undefined)
     mockGenerateRefreshToken.mockReturnValue({ rawToken: 'raw-uuid-token', tokenHash: 'sha256hashvalue' })
@@ -146,6 +151,15 @@ describe('login', () => {
 
   it('should return 400 with errorCode 708 when REFRESH_TOKENS_TABLE_NAME is not set', async () => {
     delete process.env.REFRESH_TOKENS_TABLE_NAME
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 708 when ONBOARDING_SALT_SECRET_ID is not set', async () => {
+    delete process.env.ONBOARDING_SALT_SECRET_ID
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

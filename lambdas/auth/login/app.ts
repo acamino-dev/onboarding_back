@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { ForbiddenError, UnverifiedError } from '../../../shared/constants/errors'
 import { handleError } from '../../../shared/utils/handleError'
+import { getSecret } from '../../../shared/utils/secrets'
 import { findUserByEmail } from './services/findUserByEmail'
 import { signAccessToken } from './services/signAccessToken'
 import { storeRefreshToken } from './services/storeRefreshToken'
@@ -21,11 +22,18 @@ export const lambdaHandler = async (
     const REFRESH_TOKENS_TABLE_NAME = process.env.REFRESH_TOKENS_TABLE_NAME
     if (!REFRESH_TOKENS_TABLE_NAME) throw new Error('REFRESH_TOKENS_TABLE_NAME is not set')
 
+    const ONBOARDING_SALT_SECRET_ID = process.env.ONBOARDING_SALT_SECRET_ID
+    if (!ONBOARDING_SALT_SECRET_ID) throw new Error('ONBOARDING_SALT_SECRET_ID is not set')
+
     const body = validateBody(event.body ?? '')
 
     const user = await findUserByEmail(body.email)
 
-    await comparePassword(body.password, user.password_hash)
+    const saltSecretJson = await getSecret(ONBOARDING_SALT_SECRET_ID)
+    const saltSecret = JSON.parse(saltSecretJson) as { salt: string }
+    const passwordWithSalt = `${body.password}${saltSecret.salt}`
+
+    await comparePassword(passwordWithSalt, user.password_hash)
 
     if (!user.is_active) {
       throw new ForbiddenError('Account is deactivated', {
