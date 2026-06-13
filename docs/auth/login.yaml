@@ -69,10 +69,11 @@ components:
             Internal error code:
             702 – validation error (missing or malformed fields)
             703 – wrong password
-            704 – account deactivated or email not OTP-verified
+            704 – account deactivated (is_active = false)
             705 – email not found
             708 – internal server error
-          enum: [702, 703, 704, 705, 708]
+            711 – email not OTP-verified
+          enum: [702, 703, 704, 705, 708, 711]
         errorId:
           type: string
           description: 8-character hex trace ID for support lookups
