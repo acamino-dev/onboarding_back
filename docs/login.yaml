@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: login
+  version: 1.0.0
+
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate user and return JWT access token with HttpOnly refresh token cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: Success
+          headers:
+            Set-Cookie:
+              description: HttpOnly secure cookie containing the refresh token (UUID, SHA-256 hashed server-side, 7-day TTL)
+              schema:
+                type: string
+                example: refreshToken=<uuid>; HttpOnly; Secure; SameSite=Strict; Max-Age=604800; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+        password:
+          type: string
+          example: SecurePass123!
+
+    SuccessResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: Signed JWT valid for 1 hour. Payload contains sub (userId), email, companyId.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (missing or malformed fields)
+            703 – wrong password
+            704 – account deactivated or email not OTP-verified
+            705 – email not found
+            708 – internal server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex trace ID for support lookups
+          pattern: '^[0-9a-f]{8}$'
+          example: a1b2c3d4
