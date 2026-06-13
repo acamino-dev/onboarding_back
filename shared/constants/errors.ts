@@ -84,3 +84,13 @@ export class TokenExpiredError extends Error {
     this.metadata = metadata || {}
   }
 }
+
+export class UnverifiedError extends Error {
+  metadata: ErrorMetadata
+
+  constructor(message: string, metadata?: ErrorMetadata) {
+    super(message)
+    this.name = 'UnverifiedError'
+    this.metadata = metadata || {}
+  }
+}

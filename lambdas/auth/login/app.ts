@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
-import { ForbiddenError } from '../../../shared/constants/errors'
+import { ForbiddenError, UnverifiedError } from '../../../shared/constants/errors'
 import { handleError } from '../../../shared/utils/handleError'
 import { findUserByEmail } from './services/findUserByEmail'
 import { signAccessToken } from './services/signAccessToken'
@@ -36,7 +36,7 @@ export const lambdaHandler = async (
     }
 
     if (!user.otp_verified) {
-      throw new ForbiddenError('Email not verified', {
+      throw new UnverifiedError('Email not verified', {
         file: 'lambdas/auth/login/app.ts',
         function: 'lambdaHandler',
         operation: 'check otp verified',

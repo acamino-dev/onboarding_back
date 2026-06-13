@@ -24,7 +24,7 @@ Auth module for the onboarding platform. Validates employees against HR data and
 | `shared/db/client.ts` | Async `getDb()` — fetches credentials from Secrets Manager via `DB_SECRET_ID` env var, creates memoized Pool (max=1), exposes `query()` and `queryOne()` |
 | `shared/db/dynamodb.ts` | DynamoDB DocumentClient wrapper — `dynamoDb.get()`, `dynamoDb.query()`, `dynamoDb.scan()`, `dynamoDb.put()`, `dynamoDb.update()`, `dynamoDb.delete()`. Types: `Company = { id, name, created_at }`, `Otp = { email, otp_id, code, expires_at, used }` |
 | `shared/db/types.ts` | TypeScript types for PostgreSQL table rows: `Employee`, `User`, `PasswordResetToken` |
-| `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError` |
+| `shared/constants/errors.ts` | `ValidationError`, `AuthError`, `ForbiddenError`, `NotFoundError`, `MethodNotAllowedError`, `RateLimitError`, `DuplicatedError`, `TokenExpiredError`, `UnverifiedError` |
 | `shared/utils/createResponse.ts` | Standard HTTP response builder — `createResponse(statusCode, body)` |
 | `shared/utils/handleError.ts` | Maps errors → HTTP 400 + obfuscated `{ errorCode, errorId }` response. **Single logging point** — calls `logger.errorResponse()` once per request. |
 | `shared/utils/secrets.ts` | Secrets Manager with in-memory cache — `getSecret(arn)` |
@@ -47,6 +47,7 @@ Errors always return HTTP 400 with:
 - `708` internal server error (generic Error)
 - `709` conflict (DuplicatedError)
 - `710` accessToken expired (TokenExpiredError)
+- `711` email not verified (UnverifiedError)
 
 Success responses use standard HTTP status codes (`201`, `200`, etc.) with a plain body.
 

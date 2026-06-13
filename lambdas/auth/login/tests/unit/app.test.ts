@@ -117,12 +117,12 @@ describe('login', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when OTP is not verified', async () => {
+  it('should return 400 with errorCode 711 when OTP is not verified', async () => {
     mockFindUserByEmail.mockResolvedValue({ ...MOCK_USER, otp_verified: false })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(704)
+    expect(parsed.errorCode).toBe(711)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 

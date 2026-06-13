@@ -86,6 +86,7 @@ All errors return **HTTP 400** with:
 | 708 | Internal server error | `Error` |
 | 709 | Conflict | `DuplicatedError` |
 | 710 | Access token expired | `TokenExpiredError` |
+| 711 | Email not verified | `UnverifiedError` |
 
 Success responses use standard HTTP status codes (`200`, `201`) with a plain JSON body. Absent `errorCode` means success.
 

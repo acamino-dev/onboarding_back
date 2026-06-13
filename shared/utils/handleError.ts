@@ -8,6 +8,7 @@ import {
   NotFoundError,
   RateLimitError,
   TokenExpiredError,
+  UnverifiedError,
   ValidationError,
 } from '../constants/errors'
 import type { ErrorMetadata } from '../constants/errors'
@@ -56,6 +57,10 @@ export const handleError = (error: unknown): APIGatewayProxyStructuredResultV2 =
     case error instanceof TokenExpiredError:
       errorCode = 710
       metadata = (error as InstanceType<typeof TokenExpiredError>).metadata
+      break
+    case error instanceof UnverifiedError:
+      errorCode = 711
+      metadata = (error as InstanceType<typeof UnverifiedError>).metadata
       break
     default:
       errorCode = 708
