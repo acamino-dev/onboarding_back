@@ -23,11 +23,3 @@ export interface User {
   created_at: Date
   updated_at: Date
 }
-
-export interface PasswordResetToken {
-  id: string
-  user_id: string
-  token: string
-  expires_at: Date
-  created_at: Date
-}
