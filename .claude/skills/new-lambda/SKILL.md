@@ -315,8 +315,11 @@ export default {
   testMatch: ['**/tests/integration/*.test.ts'],
   testTimeout: 30000,
   setupFiles: ['./tests/integration/setup.ts'],
+  runInBand: true,
 }
 ```
+
+`runInBand: true` is required — integration test files share DB rows via fixture IDs in `constants.ts`. Parallel execution causes race conditions (e.g. one test sets `otp_verified = true` while another reads the same row expecting `false`).
 
 ---
 
