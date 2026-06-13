@@ -221,6 +221,51 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  VerifyOTPFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingVerifyOTP${Environment}
+      CodeUri: ./
+      Handler: lambdas/auth/verifyOTP/app.lambdaHandler
+      Description: POST /auth/verifyOTP - verifies OTP code and marks user as verified
+      Environment:
+        Variables:
+          DB_SECRET_ID: !Sub onboardingCredentials${Environment}
+          OTP_TABLE_NAME: !Sub onboardingOtpDB${Environment}
+          FRONTEND_URL: !Ref FrontendUrl
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingCredentials${Environment}-*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt OtpTable.Arn
+        - VPCAccessPolicy: {}
+      Events:
+        VerifyOTP:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Path: /auth/verifyOTP
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/auth/verifyOTP/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL

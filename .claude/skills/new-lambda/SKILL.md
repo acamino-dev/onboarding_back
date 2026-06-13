@@ -119,6 +119,7 @@ lambdas/<LambdaName>/
 │   └── integration/
 │       ├── helpers/
 │       │   └── constants.ts
+│       ├── setup.ts
 │       └── <serviceName>.test.ts  (one file per service)
 ├── jest.config.ts
 ├── jest.integration.config.ts
@@ -313,8 +314,29 @@ export default {
   collectCoverage: false,
   testMatch: ['**/tests/integration/*.test.ts'],
   testTimeout: 30000,
+  setupFiles: ['./tests/integration/setup.ts'],
 }
 ```
+
+---
+
+### `tests/integration/setup.ts`
+
+Sets all env vars integration tests need — must run before any test file imports anything that reads `process.env`.
+
+```typescript
+process.env.DB_SECRET_ID = 'onboardingCredentialsDev'
+// Add one line per extra env var the lambda reads in its handler.
+// Use the Dev table name exactly as it appears in AWS (capital D in "Dev"):
+// process.env.OTP_TABLE_NAME = 'onboardingOtpDBDev'
+// process.env.COMPANIES_TABLE_NAME = 'onboardingCompaniesDBDev'
+```
+
+Rules:
+- `DB_SECRET_ID` is always required — always include it
+- Add an entry for every env var guarded in `app.ts` (any `if (!X) throw ...` block)
+- Table names follow the pattern `onboarding<TablePurpose>DB<Env>` with capital first letter on `Dev` — match exactly what SAM creates (`onboardingOtpDBDev`, `onboardingCompaniesDBDev`)
+- Without this file the `jest.integration.config.ts` `setupFiles` entry will not pick it up — both must exist
 
 ---
 
@@ -348,7 +370,9 @@ Rules:
 
 ### Integration test data setup
 
-**DynamoDB data** — always use `beforeAll`/`afterAll` inside the test file. Do NOT create a seed script.
+All test data — DynamoDB and PostgreSQL — is managed with `beforeAll`/`afterAll` inside the test file. Never use a seed script for per-lambda test fixtures.
+
+**DynamoDB example:**
 
 ```typescript
 beforeAll(async () => {
@@ -368,7 +392,33 @@ afterAll(async () => {
 })
 ```
 
-**PostgreSQL static fixtures** (employees, users that must pre-exist before tests run) — these are NOT managed in `beforeAll`/`afterAll` because they are shared across multiple lambdas. They live in `scripts/seed-integration.ts` at the project root and are run once: `npm run seed-db`. Do not create a per-lambda seed script for PG data.
+**PostgreSQL example** (insert rows, then delete in reverse FK order):
+
+```typescript
+beforeAll(async () => {
+  const db = await getDb()
+  await db.query(
+    'INSERT INTO employees (id, employee_number, rfc, company_id, is_active) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+    [TEST_EMPLOYEE.id, TEST_EMPLOYEE.employee_number, TEST_EMPLOYEE.rfc, TEST_COMPANY_ID, true]
+  )
+  await db.query(
+    'INSERT INTO users (id, employee_id, company_id, email, password_hash, otp_verified) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING',
+    [TEST_USER.id, TEST_EMPLOYEE.id, TEST_COMPANY_ID, TEST_EMAIL, '$2b$10$placeholder.hash.for.integration.tests.only', false]
+  )
+})
+
+afterAll(async () => {
+  const db = await getDb()
+  await db.query('DELETE FROM users WHERE id = $1', [TEST_USER.id])
+  await db.query('DELETE FROM employees WHERE id = $1', [TEST_EMPLOYEE.id])
+})
+```
+
+Rules:
+- Use `ON CONFLICT DO NOTHING` on inserts — safe to re-run if a prior test left data
+- Always delete in reverse FK order (users before employees)
+- Use placeholder `password_hash` string when the service under test never checks the password — avoids adding bcryptjs as a dev dep
+- `TEST_COMPANY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'` is the seeded company — reuse it across all lambdas
 
 ---
 
@@ -392,7 +442,7 @@ import { getDb } from '../../../../shared/db/client'
 import { <serviceFunction> } from '../../services/<serviceName>'
 import { /* constants */ } from './helpers/constants'
 
-// For DynamoDB-backed services: seed and clean up in beforeAll/afterAll
+// Seed and clean up all test data in beforeAll/afterAll (DynamoDB and PostgreSQL)
 beforeAll(async () => {
   await dynamoDb.put({ TableName: TABLE_NAME, Item: { ...TEST_ENTITY, created_at: Math.floor(Date.now() / 1000) } })
 })
@@ -427,8 +477,7 @@ describe('<serviceName> integration', () => {
 ```
 
 Rules:
-- DynamoDB data → `beforeAll`/`afterAll` in the test file. Never a separate seed script.
-- PostgreSQL static fixtures (employees, users) → already seeded via `npm run seed-db` (project root). Tests assume they exist.
+- All data (DynamoDB and PostgreSQL) → `beforeAll`/`afterAll` in the test file. Never a separate seed script.
 - `afterEach` cleanup only on write services (INSERT/UPDATE/DELETE) — SELECT services need none
 - Assert DB state directly with `db.queryOne` for INSERT tests — don't trust the function's return alone
 - Use fixture constants for all IDs, never inline raw UUIDs in test bodies

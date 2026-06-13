@@ -1,0 +1,75 @@
+openapi: 3.0.3
+info:
+  title: verifyOTP
+  version: 1.0.0
+
+paths:
+  /auth/verifyOTP:
+    post:
+      summary: Verify OTP code and mark user as verified
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+          format: email
+          example: jane.doe@company.com
+        code:
+          type: string
+          pattern: '^\d{6}$'
+          description: 6-digit numeric OTP code
+          example: "482931"
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OTP verified
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (missing or malformed fields)
+            703 – OTP expired
+            705 – OTP not found or user not found
+            708 – internal server error
+            709 – OTP already used or user already verified
+          enum: [702, 703, 705, 708, 709]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
+          example: "a1b2c3d4"
