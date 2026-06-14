@@ -378,6 +378,52 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  ResetPasswordFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingResetPassword${Environment}
+      CodeUri: ./
+      Handler: lambdas/auth/resetPassword/app.lambdaHandler
+      Description: POST /auth/resetPassword - validates recovery OTP and updates user password
+      Environment:
+        Variables:
+          DB_SECRET_ID: !Sub onboardingCredentials${Environment}
+          OTP_TABLE_NAME: !Sub onboardingOtpDB${Environment}
+          ONBOARDING_SALT_SECRET_ID: !Sub onboardingSalt${Environment}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingCredentials${Environment}-*
+                - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingSalt${Environment}-*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt OtpTable.Arn
+        - VPCAccessPolicy: {}
+      Events:
+        ResetPassword:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthApi
+            Path: /auth/resetPassword
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/auth/resetPassword/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
