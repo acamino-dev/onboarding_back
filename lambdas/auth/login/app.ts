@@ -29,12 +29,6 @@ export const lambdaHandler = async (
 
     const user = await findUserByEmail(body.email)
 
-    const saltSecretJson = await getSecret(ONBOARDING_SALT_SECRET_ID)
-    const saltSecret = JSON.parse(saltSecretJson) as { salt: string }
-    const passwordWithSalt = `${body.password}${saltSecret.salt}`
-
-    await comparePassword(passwordWithSalt, user.password_hash)
-
     if (!user.is_active) {
       throw new ForbiddenError('Account is deactivated', {
         file: 'lambdas/auth/login/app.ts',
@@ -50,6 +44,12 @@ export const lambdaHandler = async (
         operation: 'check otp verified',
       })
     }
+
+    const saltSecretJson = await getSecret(ONBOARDING_SALT_SECRET_ID)
+    const saltSecret = JSON.parse(saltSecretJson) as { salt: string }
+    const passwordWithSalt = `${body.password}${saltSecret.salt}`
+
+    await comparePassword(passwordWithSalt, user.password_hash)
 
     const { rawToken, tokenHash } = generateRefreshToken()
     await storeRefreshToken(tokenHash, user.id, REFRESH_TOKENS_TABLE_NAME)
