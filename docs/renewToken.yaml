@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: renewToken
+  version: 1.0.0
+
+paths:
+  /auth/renewToken:
+    post:
+      summary: Verifies refresh token, rotates it, and issues a new access token
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+            example: Bearer <expiredAccessToken>
+          description: Expired (or valid) JWT — must have a valid signature
+        - in: cookie
+          name: refreshToken
+          required: true
+          schema:
+            type: string
+          description: HttpOnly refresh token issued at login or last renewal
+      responses:
+        "200":
+          description: New access token issued and refresh token rotated
+          headers:
+            Set-Cookie:
+              description: Rotated HttpOnly refresh token (7-day TTL)
+              schema:
+                type: string
+                example: refreshToken=<newToken>; HttpOnly; Secure; SameSite=Strict; Max-Age=604800; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - accessToken
+      properties:
+        accessToken:
+          type: string
+          description: Newly signed JWT (1-hour expiry)
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (missing/malformed Authorization header or refreshToken cookie)
+            703 – auth error (invalid token signature or refresh token not found/expired)
+            708 – generic error (infrastructure failure)
+          enum: [702, 703, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
