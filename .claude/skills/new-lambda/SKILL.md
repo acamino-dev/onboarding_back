@@ -339,6 +339,7 @@ Rules:
 - `DB_SECRET_ID` is always required — always include it
 - Add an entry for every env var guarded in `app.ts` (any `if (!X) throw ...` block)
 - Table names follow the pattern `onboarding<TablePurpose>DB<Env>` with capital first letter on `Dev` — match exactly what SAM creates (`onboardingOtpDBDev`, `onboardingCompaniesDBDev`)
+- **ARN env vars** (e.g. `JWT_SECRET_ARN`): use just the secret name — `process.env.JWT_SECRET_ARN = 'onboardingJWTDev'`. Secrets Manager accepts both name and ARN as `SecretId`; never hardcode ARNs in integration test setup.
 - Without this file the `jest.integration.config.ts` `setupFiles` entry will not pick it up — both must exist
 
 ---
