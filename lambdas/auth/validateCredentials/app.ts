@@ -1,5 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { createHash } from 'crypto'
+import { AuthError } from '../../../shared/constants/errors'
 import { createResponsePublic } from '../../../shared/utils/createResponse'
 import { handleError } from '../../../shared/utils/handleError'
 import { findRefreshToken } from './services/findRefreshToken'
@@ -24,10 +25,18 @@ export const lambdaHandler = async (
       event.cookies
     )
 
-    const { email } = await verifyAccessToken(accessToken, JWT_SECRET_ARN)
+    const { userId, email } = await verifyAccessToken(accessToken, JWT_SECRET_ARN)
 
     const tokenHash = createHash('sha256').update(refreshToken).digest('hex')
-    await findRefreshToken(tokenHash, REFRESH_TOKENS_TABLE_NAME)
+    const tokenData = await findRefreshToken(tokenHash, REFRESH_TOKENS_TABLE_NAME)
+
+    if (tokenData.user_id !== userId) {
+      throw new AuthError('Token mismatch', {
+        file: 'lambdas/auth/validateCredentials/app.ts',
+        function: 'lambdaHandler',
+        operation: 'cross-token binding check',
+      })
+    }
 
     return createResponsePublic(200, { email })
   } catch (e) {

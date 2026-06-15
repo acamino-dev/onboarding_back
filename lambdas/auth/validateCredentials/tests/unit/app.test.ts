@@ -87,6 +87,19 @@ describe('validateCredentials', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
+  it('should return 400 with errorCode 703 when access token userId does not match refresh token user_id', async () => {
+    mockFindRefreshToken.mockResolvedValue({
+      token_hash: 'abc123hashvalue',
+      user_id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+    })
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(703)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
   it('should return 400 with errorCode 703 when refresh token is not found', async () => {
     const { AuthError } = await import('../../../../../shared/constants/errors')
     mockFindRefreshToken.mockRejectedValue(new AuthError('Refresh token not found'))
