@@ -1,6 +1,6 @@
-import { SEEDED_USER_ID, TEST_COMPANY_ID } from '../../../../../../scripts/constants'
+import { SEEDED_USER_ID, TEST_COMPANY_ID, EMPLOYEES } from '../../../../../../scripts/constants'
 
-export { SEEDED_USER_ID, TEST_COMPANY_ID }
+export { SEEDED_USER_ID, TEST_COMPANY_ID, EMPLOYEES }
 
 export const TEST_REFRESH_TOKENS = {
   active: {

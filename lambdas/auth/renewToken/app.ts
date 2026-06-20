@@ -1,9 +1,9 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { createHash } from 'crypto'
 import { handleError } from '../../../shared/utils/handleError'
-import { decodeExpiredToken } from './services/decodeExpiredToken'
 import { deleteRefreshToken } from './services/deleteRefreshToken'
 import { findRefreshToken } from './services/findRefreshToken'
+import { findUser } from './services/findUser'
 import { signAccessToken } from './services/signAccessToken'
 import { storeRefreshToken } from './services/storeRefreshToken'
 import { generateRefreshToken } from './utils/generateRefreshToken'
@@ -22,12 +22,13 @@ export const lambdaHandler = async (
     const REFRESH_TOKENS_TABLE_NAME = process.env.REFRESH_TOKENS_TABLE_NAME
     if (!REFRESH_TOKENS_TABLE_NAME) throw new Error('REFRESH_TOKENS_TABLE_NAME is not set')
 
-    const { accessToken, refreshToken } = validateRequest(event.headers ?? {}, event.cookies)
-
-    const { userId, email, companyId } = await decodeExpiredToken(accessToken, JWT_SECRET_ARN)
+    const { refreshToken } = validateRequest(event.cookies)
 
     const oldTokenHash = createHash('sha256').update(refreshToken).digest('hex')
-    await findRefreshToken(oldTokenHash, REFRESH_TOKENS_TABLE_NAME)
+    const { user_id: userId } = await findRefreshToken(oldTokenHash, REFRESH_TOKENS_TABLE_NAME)
+
+    const { email, companyId } = await findUser(userId)
+
     await deleteRefreshToken(oldTokenHash, REFRESH_TOKENS_TABLE_NAME)
 
     const { rawToken, tokenHash: newTokenHash } = generateRefreshToken()

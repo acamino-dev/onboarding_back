@@ -1,28 +1,28 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
-import { decodeExpiredToken } from '../../services/decodeExpiredToken'
 import { findRefreshToken } from '../../services/findRefreshToken'
 import { deleteRefreshToken } from '../../services/deleteRefreshToken'
+import { findUser } from '../../services/findUser'
 import { storeRefreshToken } from '../../services/storeRefreshToken'
 import { signAccessToken } from '../../services/signAccessToken'
 import { generateRefreshToken } from '../../utils/generateRefreshToken'
 
-jest.mock('../../services/decodeExpiredToken')
 jest.mock('../../services/findRefreshToken')
 jest.mock('../../services/deleteRefreshToken')
+jest.mock('../../services/findUser')
 jest.mock('../../services/storeRefreshToken')
 jest.mock('../../services/signAccessToken')
 jest.mock('../../utils/generateRefreshToken')
 
-const mockDecodeExpiredToken = decodeExpiredToken as jest.MockedFunction<typeof decodeExpiredToken>
 const mockFindRefreshToken = findRefreshToken as jest.MockedFunction<typeof findRefreshToken>
 const mockDeleteRefreshToken = deleteRefreshToken as jest.MockedFunction<typeof deleteRefreshToken>
+const mockFindUser = findUser as jest.MockedFunction<typeof findUser>
 const mockStoreRefreshToken = storeRefreshToken as jest.MockedFunction<typeof storeRefreshToken>
 const mockSignAccessToken = signAccessToken as jest.MockedFunction<typeof signAccessToken>
 const mockGenerateRefreshToken = generateRefreshToken as jest.MockedFunction<typeof generateRefreshToken>
 
 const baseEvent: Partial<APIGatewayProxyEventV2> = {
-  headers: { authorization: 'Bearer expired.jwt.token' },
+  headers: {},
   cookies: ['refreshToken=550e8400-e29b-41d4-a716-446655440000'],
 }
 
@@ -33,15 +33,14 @@ describe('renewToken', () => {
     process.env.JWT_SECRET_ARN = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:onboardingJWTDev'
     process.env.REFRESH_TOKENS_TABLE_NAME = 'onboardingRefreshTokensDBDev'
 
-    mockDecodeExpiredToken.mockResolvedValue({
-      userId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-      email: 'jane.doe@company.com',
-      companyId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-    })
     mockFindRefreshToken.mockResolvedValue({
       token_hash: 'oldhashvalue123',
       user_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       expires_at: Math.floor(Date.now() / 1000) + 604800,
+    })
+    mockFindUser.mockResolvedValue({
+      email: 'jane.doe@company.com',
+      companyId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
     })
     mockDeleteRefreshToken.mockResolvedValue(undefined)
     mockGenerateRefreshToken.mockReturnValue({ rawToken: 'new-raw-uuid-token', tokenHash: 'newhashvalue456' })
@@ -66,37 +65,11 @@ describe('renewToken', () => {
     expect(mockStoreRefreshToken).toHaveBeenCalledWith('newhashvalue456', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'onboardingRefreshTokensDBDev')
   })
 
-  it('should return 400 with errorCode 702 when Authorization header is missing', async () => {
-    const result = await lambdaHandler({ ...baseEvent, headers: {} } as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 400 with errorCode 702 when Authorization header is malformed', async () => {
-    const result = await lambdaHandler({ ...baseEvent, headers: { authorization: 'NotBearer token' } } as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
   it('should return 400 with errorCode 702 when refreshToken cookie is missing', async () => {
     const result = await lambdaHandler({ ...baseEvent, cookies: [] } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 400 with errorCode 703 when accessToken has invalid signature', async () => {
-    const { AuthError } = await import('../../../../../shared/constants/errors')
-    mockDecodeExpiredToken.mockRejectedValue(new AuthError('Invalid token signature'))
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(703)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
@@ -113,6 +86,16 @@ describe('renewToken', () => {
   it('should return 400 with errorCode 703 when refreshToken is expired', async () => {
     const { AuthError } = await import('../../../../../shared/constants/errors')
     mockFindRefreshToken.mockRejectedValue(new AuthError('Refresh token expired'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(703)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 703 when user is not found', async () => {
+    const { AuthError } = await import('../../../../../shared/constants/errors')
+    mockFindUser.mockRejectedValue(new AuthError('User not found'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -147,8 +130,8 @@ describe('renewToken', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 708 when decodeExpiredToken throws a DB error', async () => {
-    mockDecodeExpiredToken.mockRejectedValue(new Error('connection timeout'))
+  it('should return 400 with errorCode 708 when findRefreshToken throws a DB error', async () => {
+    mockFindRefreshToken.mockRejectedValue(new Error('connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -156,8 +139,8 @@ describe('renewToken', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 708 when findRefreshToken throws a DB error', async () => {
-    mockFindRefreshToken.mockRejectedValue(new Error('connection timeout'))
+  it('should return 400 with errorCode 708 when findUser throws a DB error', async () => {
+    mockFindUser.mockRejectedValue(new Error('Error on findUser: connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

@@ -1,7 +1,7 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "jsonwebtoken"]
   },
   "include": ["../../../shared/**/*.ts", "../../../scripts/**/*.ts", "**/*.ts"],
   "exclude": ["node_modules", "dist"]
