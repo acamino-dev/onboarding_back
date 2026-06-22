@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: getCreditHistory
+  version: 1.0.0
+
+paths:
+  /home/getCreditHistory:
+    post:
+      summary: Scrapes portal and returns client credit history by RFC
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: Success — returns credit data or history:false if RFC not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - rfc
+      properties:
+        rfc:
+          type: string
+          description: Mexican RFC with homoclave (12 chars for moral, 13 for física)
+          pattern: '^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$'
+
+    Payment:
+      type: object
+      properties:
+        operationDate:
+          type: string
+        dueDate:
+          type: string
+
+    CreditEntry:
+      type: object
+      properties:
+        creditId:
+          type: string
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+
+    SuccessResponse:
+      type: object
+      properties:
+        history:
+          type: boolean
+          description: false when RFC not found in portal; all other fields are null in that case
+        operator:
+          type: boolean
+          nullable: true
+        activeCredit:
+          type: boolean
+          nullable: true
+        balance:
+          type: number
+          nullable: true
+        credit:
+          type: string
+          nullable: true
+        creditHistory:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/CreditEntry'
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            702 – validation error (invalid RFC format)
+            703 – portal login failed
+            708 – scraping or infrastructure error
+          enum: [702, 703, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'

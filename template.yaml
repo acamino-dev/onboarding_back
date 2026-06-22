@@ -84,7 +84,7 @@ Resources:
         AttributeName: expires_at
         Enabled: true
 
-  AuthApi:
+  OnboardingApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: $default
@@ -134,7 +134,7 @@ Resources:
         Register:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/register
             Method: POST
     Metadata:
@@ -171,7 +171,7 @@ Resources:
         GetCompanies:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/getCompanies
             Method: POST
     Metadata:
@@ -222,7 +222,7 @@ Resources:
         SendOTP:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/sendOTP
             Method: POST
     Metadata:
@@ -272,7 +272,7 @@ Resources:
         SendRecoveryOTP:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/sendRecoveryOTP
             Method: POST
     Metadata:
@@ -317,7 +317,7 @@ Resources:
         VerifyOTP:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/verifyOTP
             Method: POST
     Metadata:
@@ -364,7 +364,7 @@ Resources:
         Login:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/login
             Method: POST
     Metadata:
@@ -409,7 +409,7 @@ Resources:
         ValidateCredentials:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/validateCredentials
             Method: POST
     Metadata:
@@ -455,7 +455,7 @@ Resources:
         ResetPassword:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/resetPassword
             Method: POST
     Metadata:
@@ -502,7 +502,7 @@ Resources:
         RenewToken:
           Type: HttpApi
           Properties:
-            ApiId: !Ref AuthApi
+            ApiId: !Ref OnboardingApi
             Path: /auth/renewToken
             Method: POST
     Metadata:
@@ -516,10 +516,46 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  GetCreditHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingGetCreditHistory${Environment}
+      CodeUri: ./
+      Handler: lambdas/home/getCreditHistory/app.lambdaHandler
+      Description: POST /home/getCreditHistory - scrapes portal and returns client credit history by RFC
+      Environment:
+        Variables:
+          PORTAL_SECRET_ARN: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingTP${Environment}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingTP-*
+        - VPCAccessPolicy: {}
+      Events:
+        GetCreditHistory:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /home/getCreditHistory
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/home/getCreditHistory/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
-    Value: !Sub "https://${AuthApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Value: !Sub "https://${OnboardingApi}.execute-api.${AWS::Region}.amazonaws.com"
   RegisterFunctionArn:
     Description: Register Lambda ARN
     Value: !GetAtt RegisterFunction.Arn

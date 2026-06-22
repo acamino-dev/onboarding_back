@@ -1,0 +1,2 @@
+export const TEST_RFC_VALID = 'TESE870227M20'
+export const TEST_RFC_NOT_FOUND = 'ZZZZ991231ZZ9'
