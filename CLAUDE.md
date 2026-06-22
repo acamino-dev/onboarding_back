@@ -110,6 +110,26 @@ This is what the unit test 708 cases assert: `mockX.mockRejectedValue(new Error(
 
 ## Testing conventions
 
+### Running tests — ALWAYS run both suites
+
+After any service change, **both** test suites must be run. Unit tests alone are not sufficient verification.
+
+**Why:** Unit tests mock all services (`jest.mock('../../services/...')`). They test the lambda handler in isolation — they never execute the real service code. Service-layer bugs (wrong HTTP fields, broken auth flows, bad cookie handling, incorrect DB queries) are completely invisible to unit tests and only surface in integration tests.
+
+```bash
+# From lambdas/<group>/<name>/
+
+# Unit tests (fast, mocked, no AWS):
+npm run unit
+
+# Integration tests (hit real AWS/external services):
+NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.integration.config.ts --verbose
+```
+
+**Rule:** A change is only verified when BOTH suites pass. If integration tests don't exist yet for a lambda, note it explicitly — do not claim the change is verified on unit tests alone.
+
+### Unit test required cases
+
 Every lambda test suite (`tests/unit/app.test.ts`) must cover these cases in addition to its business-logic scenarios:
 
 | Case | Expected errorCode |
