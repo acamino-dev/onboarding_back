@@ -10,10 +10,12 @@ type PortalSecret = {
 }
 
 describe('loginToPortal integration', () => {
-  it('completes login and returns a session cookie', async () => {
+  it('completes login and returns session cookie with .ASPXAUTH', async () => {
     const raw = await getSecret(PORTAL_SECRET_ARN)
     const { url, user, password } = JSON.parse(raw) as PortalSecret
     const cookie = await loginToPortal(url, user, password)
     expect(cookie.length).toBeGreaterThan(0)
+    expect(cookie).toContain('ASP.NET_SessionId')
+    expect(cookie).toContain('.ASPXAUTH')
   })
 })

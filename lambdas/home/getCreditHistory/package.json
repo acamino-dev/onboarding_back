@@ -12,9 +12,7 @@
     "test": "npm run compile && npm run unit && npm run test:integration",
     "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.integration.config.ts"
   },
-  "dependencies": {
-    "playwright": "^1.49.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/jest": "^29.0.0",
     "@types/node": "^22.0.0",
