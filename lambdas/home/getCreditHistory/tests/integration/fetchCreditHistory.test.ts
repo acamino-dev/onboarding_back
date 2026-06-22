@@ -1,12 +1,11 @@
 import { fetchCreditHistory } from '../../services/fetchCreditHistory'
+import { TEST_RFC_VALID, TEST_RFC_NOT_FOUND } from './helpers/constants'
 
 const PORTAL_SECRET_ARN = process.env.PORTAL_SECRET_ARN as string
-const TEST_RFC_WITH_HISTORY = 'TESE870227M20'
-const TEST_RFC_WITHOUT_HISTORY = 'AAAA000101AAA'
 
 describe('fetchCreditHistory integration', () => {
   it('returns history: true with credit entries when RFC exists', async () => {
-    const result = await fetchCreditHistory(TEST_RFC_WITH_HISTORY, PORTAL_SECRET_ARN)
+    const result = await fetchCreditHistory(TEST_RFC_VALID, PORTAL_SECRET_ARN)
 
     expect(result.history).toBe(true)
     if (!result.history) return
@@ -28,7 +27,7 @@ describe('fetchCreditHistory integration', () => {
   })
 
   it('returns history: false with all nulls when RFC has no records', async () => {
-    const result = await fetchCreditHistory(TEST_RFC_WITHOUT_HISTORY, PORTAL_SECRET_ARN)
+    const result = await fetchCreditHistory(TEST_RFC_NOT_FOUND, PORTAL_SECRET_ARN)
 
     expect(result.history).toBe(false)
     expect(result.operator).toBeNull()
