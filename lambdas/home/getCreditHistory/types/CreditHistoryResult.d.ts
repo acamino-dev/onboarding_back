@@ -1,6 +1,15 @@
 export type Payment = {
   operationDate: string
+  valueDate: string
+  amount: string
+  concept: string
   dueDate: string
+  paymentType: string
+  invoice: string
+  capital: string
+  interest: string
+  iva: string
+  total: string
 }
 
 export type CreditEntry = {

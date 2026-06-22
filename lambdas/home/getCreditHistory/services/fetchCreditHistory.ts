@@ -1,12 +1,33 @@
 import { AuthError } from '../../../../shared/constants/errors'
 import { getSecret } from '../../../../shared/utils/secrets'
 import { loginToPortal, buildConsultaUrl, extractHiddenField } from './portalLogin'
-import type { CreditHistoryResult, CreditEntry } from '../types/CreditHistoryResult'
+import { fetchContractPayments } from './fetchContractPayments'
+import type { CreditHistoryResult } from '../types/CreditHistoryResult'
 
 type PortalSecret = {
   user: string
   password: string
   url: string
+}
+
+type ParsedCreditRow = {
+  creditId: string
+  status: string
+  balance: number
+  eventTarget: string
+}
+
+// Statuses whose payment ledger we drill into. Other statuses still appear in
+// the history list but with an empty payments array.
+const PAYMENT_STATUSES = new Set(['ACTIVO', 'TERMINADO'])
+
+const EMPTY_RESULT: CreditHistoryResult = {
+  history: false,
+  operator: null,
+  activeCredit: null,
+  balance: null,
+  credit: null,
+  creditHistory: null,
 }
 
 const stripTags = (html: string): string => html.replace(/<[^>]+>/g, '').trim()
@@ -16,52 +37,49 @@ const extractSpanText = (html: string, idSuffix: string): string => {
   return match?.[1]?.trim() ?? ''
 }
 
+const extractInputValue = (html: string, idSuffix: string): string => {
+  const match =
+    html.match(new RegExp(`id="[^"]*${idSuffix}"[^>]*value="([^"]*)"`)) ??
+    html.match(new RegExp(`value="([^"]*)"[^>]*id="[^"]*${idSuffix}"`))
+  return match?.[1] ?? ''
+}
+
 const parseBalance = (text: string): number => parseFloat(text.replace(/,/g, '')) || 0
 
-const parseCreditTable = (responseText: string): CreditHistoryResult => {
+// __VIEWSTATE / __VIEWSTATEGENERATOR arrive inside the async-postback delta as
+// |<len>|hiddenField|<name>|<value>|. Fall back to a plain hidden input in case
+// the search ever returns a full page.
+const extractDeltaField = (responseText: string, name: string): string => {
+  const match = responseText.match(new RegExp(`\\|hiddenField\\|${name}\\|([^|]*)\\|`))
+  return match?.[1] ?? extractHiddenField(responseText, name)
+}
+
+const parseCreditTable = (responseText: string): ParsedCreditRow[] => {
   const tableMatch = responseText.match(
     /<table[^>]*id="ctl00_ContentPlaceHolder1_gvData"[^>]*>([\s\S]*?)<\/table>/
   )
-  if (!tableMatch) {
-    return { history: false, operator: null, activeCredit: null, balance: null, credit: null, creditHistory: null }
-  }
+  if (!tableMatch) return []
 
   const rows = [...tableMatch[1].matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].slice(1)
-  if (rows.length === 0) {
-    return { history: false, operator: null, activeCredit: null, balance: null, credit: null, creditHistory: null }
-  }
-
-  const creditHistory: CreditEntry[] = []
-  let activeCredit = false
-  let balance = 0
-  let credit = ''
+  const parsed: ParsedCreditRow[] = []
 
   for (const row of rows) {
     const rowHtml = row[1]
     const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) => stripTags(m[1]))
     if (cells.length < 9) continue
 
-    const creditId = cells[0]
-    const status = cells[8]
-
-    if (status === 'ACTIVO' && !activeCredit) {
-      activeCredit = true
-      balance = parseBalance(extractSpanText(rowHtml, 'lblMonto2'))
-      credit = creditId
-    }
-
-    creditHistory.push({
-      creditId,
-      payments: [
-        {
-          operationDate: extractSpanText(rowHtml, 'lblFecIni'),
-          dueDate: extractSpanText(rowHtml, 'lblFecFin'),
-        },
-      ],
+    parsed.push({
+      creditId: cells[0],
+      status: cells[8],
+      balance: parseBalance(extractSpanText(rowHtml, 'lblMonto2')),
+      // The link's __doPostBack arg; quotes arrive HTML-encoded (&#39;) in the
+      // async-postback delta, plain (') in a full page.
+      eventTarget:
+        rowHtml.match(/__doPostBack\((?:&#39;|')([^&']*lnkRegistro)(?:&#39;|')/)?.[1] ?? '',
     })
   }
 
-  return { history: true, operator: false, activeCredit, balance, credit, creditHistory }
+  return parsed
 }
 
 export const fetchCreditHistory = async (
@@ -119,7 +137,50 @@ export const fetchCreditHistory = async (
       throw new Error(`search failed with status ${postResponse.status}`)
     }
 
-    return parseCreditTable(await postResponse.text())
+    const searchText = await postResponse.text()
+    const rows = parseCreditTable(searchText)
+    if (rows.length === 0) return EMPTY_RESULT
+
+    const searchViewState = extractDeltaField(searchText, '__VIEWSTATE')
+    const searchViewStateGenerator = extractDeltaField(searchText, '__VIEWSTATEGENERATOR')
+    const clientCve = extractInputValue(searchText, '_txtCve')
+    const clientNom = extractInputValue(searchText, '_txtNom')
+
+    const firstActive = rows.find((row) => row.status === 'ACTIVO')
+
+    const creditHistory = await Promise.all(
+      rows.map(async (row) => {
+        if (!PAYMENT_STATUSES.has(row.status) || !row.eventTarget) {
+          return { creditId: row.creditId, payments: [] }
+        }
+        try {
+          const payments = await fetchContractPayments({
+            searchUrl: consultaUrl,
+            cookie,
+            viewState: searchViewState,
+            viewStateGenerator: searchViewStateGenerator,
+            rfc,
+            clientCve,
+            clientNom,
+            eventTarget: row.eventTarget,
+          })
+          return { creditId: row.creditId, payments }
+        } catch {
+          // Degrade gracefully: one unreachable contract should not drop the
+          // whole history. Leave its ledger empty.
+          return { creditId: row.creditId, payments: [] }
+        }
+      })
+    )
+
+    return {
+      history: true,
+      operator: false,
+      activeCredit: Boolean(firstActive),
+      balance: firstActive?.balance ?? 0,
+      credit: firstActive?.creditId ?? '',
+      creditHistory,
+    }
   } catch (error) {
     if (error instanceof AuthError) throw error
     throw new Error(

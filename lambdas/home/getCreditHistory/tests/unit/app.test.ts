@@ -20,7 +20,21 @@ const mockCreditResult = {
   creditHistory: [
     {
       creditId: 'CRED-001',
-      payments: [{ operationDate: '2024-01-15', dueDate: '2024-02-01' }],
+      payments: [
+        {
+          operationDate: '28/01/2024',
+          valueDate: '08/11/2023',
+          amount: '1,421.00',
+          concept: 'PAGO 1   de 12',
+          dueDate: '31/10/2023',
+          paymentType: 'MANUAL',
+          invoice: 'FCP   187',
+          capital: '1,116.50',
+          interest: '262.50',
+          iva: '42.00',
+          total: '1,421.00',
+        },
+      ],
     },
   ],
 }
