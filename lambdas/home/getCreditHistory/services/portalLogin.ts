@@ -1,5 +1,9 @@
-import https from 'https'
 import { AuthError } from '../../../../shared/constants/errors'
+import { httpsRequest } from './functions/httpsRequest'
+import { mergeCookies } from './functions/mergeCookies'
+import { extractHiddenField } from './functions/parseHtml'
+
+export { buildConsultaUrl } from './functions/buildConsultaUrl'
 
 type ViewStateTokens = {
   __VIEWSTATE: string
@@ -7,78 +11,11 @@ type ViewStateTokens = {
   __EVENTVALIDATION: string
 }
 
-type HttpResult = {
-  statusCode: number
-  cookies: string
-  location: string | null
-  body: string
-}
-
-const CONSULTA_FINANCIERA_PATH = '/Migrado/su_conFinanciera.aspx'
-
-export const buildConsultaUrl = (loginUrl: string): string => {
-  const parsed = new URL(loginUrl)
-  const segments = parsed.pathname.split('/').filter(Boolean)
-  const appSegment = segments[0] ?? ''
-  return `${parsed.origin}/${appSegment}${CONSULTA_FINANCIERA_PATH}`
-}
-
-export const extractHiddenField = (html: string, id: string): string => {
-  const match =
-    html.match(new RegExp(`id="${id}"[^>]*value="([^"]*)"`, 'i')) ??
-    html.match(new RegExp(`value="([^"]*)"[^>]*id="${id}"`, 'i'))
-  return match?.[1] ?? ''
-}
-
 const extractViewStateTokens = (html: string): ViewStateTokens => ({
   __VIEWSTATE: extractHiddenField(html, '__VIEWSTATE'),
   __VIEWSTATEGENERATOR: extractHiddenField(html, '__VIEWSTATEGENERATOR'),
   __EVENTVALIDATION: extractHiddenField(html, '__EVENTVALIDATION'),
 })
-
-export const mergeCookies = (base: string, extra: string): string => {
-  if (!extra) return base
-  if (!base) return extra
-  const map = new Map<string, string>()
-  for (const c of [...base.split('; '), ...extra.split('; ')]) {
-    const name = c.split('=')[0]
-    if (name) map.set(name, c)
-  }
-  return [...map.values()].join('; ')
-}
-
-const httpsRequest = (
-  url: string,
-  options: { method: string; headers?: Record<string, string | number>; body?: string }
-): Promise<HttpResult> =>
-  new Promise((resolve, reject) => {
-    const { hostname, pathname, search, port } = new URL(url)
-    const bodyBuf = options.body ? Buffer.from(options.body) : undefined
-
-    const req = https.request(
-      {
-        hostname,
-        path: `${pathname}${search}`,
-        method: options.method,
-        port: port || 443,
-        headers: {
-          ...options.headers,
-          ...(bodyBuf && { 'Content-Length': bodyBuf.length }),
-        },
-      },
-      (res) => {
-        const cookies = (res.headers['set-cookie'] ?? []).map((c) => c.split(';')[0]).join('; ')
-        const location = (res.headers['location'] as string | undefined) ?? null
-        let body = ''
-        res.on('data', (chunk: Buffer) => { body += chunk.toString() })
-        res.on('end', () => resolve({ statusCode: res.statusCode ?? 0, cookies, location, body }))
-      }
-    )
-
-    req.on('error', reject)
-    if (bodyBuf) req.write(bodyBuf)
-    req.end()
-  })
 
 export const loginToPortal = async (url: string, user: string, password: string): Promise<string> => {
   const loginPage = await httpsRequest(url, { method: 'GET' })
