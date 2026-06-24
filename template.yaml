@@ -523,6 +523,8 @@ Resources:
       CodeUri: ./
       Handler: lambdas/home/getCreditHistory/app.lambdaHandler
       Description: Internal only - scrapes portal and returns client credit history by RFC (no API Gateway trigger)
+      Timeout: 300
+      MemorySize: 1024
       Environment:
         Variables:
           PORTAL_SECRET_ARN: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingTP${Environment}
