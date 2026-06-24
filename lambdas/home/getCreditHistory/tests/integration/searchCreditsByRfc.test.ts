@@ -25,6 +25,11 @@ describe('searchCreditsByRfc integration', () => {
   it('returns rows with credit data when RFC exists', async () => {
     const result = await searchCreditsByRfc(consultaUrl, cookie, TEST_RFC_VALID)
 
+    console.log(`Credits found for RFC ${TEST_RFC_VALID}: ${result.rows.length}`)
+    result.rows.forEach((row, i) => {
+      console.log(`  [${i + 1}] creditId=${row.creditId} | status=${row.status} | balance=${row.balance}`)
+    })
+
     expect(Array.isArray(result.rows)).toBe(true)
     expect(result.rows.length).toBeGreaterThan(0)
 
@@ -43,6 +48,8 @@ describe('searchCreditsByRfc integration', () => {
 
   it('returns empty rows when RFC has no records', async () => {
     const result = await searchCreditsByRfc(consultaUrl, cookie, TEST_RFC_NOT_FOUND)
+
+    console.log(`Credits found for unknown RFC ${TEST_RFC_NOT_FOUND}: ${result.rows.length}`)
 
     expect(Array.isArray(result.rows)).toBe(true)
     expect(result.rows.length).toBe(0)

@@ -61,13 +61,9 @@ export const fetchContractPayments = async (
   Promise.all(
     rows
       .filter((row) => PAYMENT_STATUSES.has(row.status))
-      .map(async (row) => {
+      .map(async (row): Promise<CreditEntry> => {
         if (!row.eventTarget) return { creditId: row.creditId, payments: [] }
-        try {
-          const payments = await fetchSingleContractPayments({ ...context, eventTarget: row.eventTarget })
-          return { creditId: row.creditId, payments }
-        } catch {
-          return { creditId: row.creditId, payments: [] }
-        }
+        const payments = await fetchSingleContractPayments({ ...context, eventTarget: row.eventTarget })
+        return { creditId: row.creditId, payments }
       })
   )

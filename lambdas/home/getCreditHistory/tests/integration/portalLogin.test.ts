@@ -14,6 +14,9 @@ describe('loginToPortal integration', () => {
     const raw = await getSecret(PORTAL_SECRET_ARN)
     const { url, user, password } = JSON.parse(raw) as PortalSecret
     const cookie = await loginToPortal(url, user, password)
+
+    console.log('Session cookie:', cookie)
+
     expect(cookie.length).toBeGreaterThan(0)
     expect(cookie).toContain('ASP.NET_SessionId')
     expect(cookie).toContain('.ASPXAUTH')
