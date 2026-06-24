@@ -2,9 +2,11 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from '
 import { createResponsePublic } from '../../../shared/utils/createResponse'
 import { handleError } from '../../../shared/utils/handleError'
 import { getSecret } from '../../../shared/utils/secrets'
-import { loginToPortal, buildConsultaUrl } from './services/portalLogin'
+import { loginToPortal, buildConsultaUrl, buildCatPersonaUrl } from './services/portalLogin'
 import { searchCreditsByRfc } from './services/searchCreditsByRfc'
 import { fetchContractPayments } from './services/fetchContractPayments'
+import { fetchEmployeeInfo } from './services/fetchEmployeeInfo'
+import { fetchEmploymentData } from './services/fetchEmploymentData'
 import { validateBody } from './utils/validators'
 import type { CreditHistoryResult } from './types/CreditHistoryResult'
 
@@ -37,27 +39,34 @@ export const lambdaHandler = async (
 
     const cookie = await loginToPortal(url, user, password)
     const consultaUrl = buildConsultaUrl(url)
+    const catPersonaUrl = buildCatPersonaUrl(url)
 
-    const { rows, viewState, viewStateGenerator, clientCve, clientNom } =
-      await searchCreditsByRfc(consultaUrl, cookie, body.rfc)
+    const [employeeInfo, searchResult] = await Promise.all([
+      fetchEmployeeInfo(catPersonaUrl, cookie, body.rfc),
+      searchCreditsByRfc(consultaUrl, cookie, body.rfc),
+    ])
 
-    if (rows.length === 0) return createResponsePublic(200, EMPTY_RESULT)
+    if (!employeeInfo || searchResult.rows.length === 0) return createResponsePublic(200, EMPTY_RESULT)
 
+    const { rows, viewState, viewStateGenerator, clientCve, clientNom } = searchResult
     const firstActive = rows.find((row) => row.status === 'ACTIVO')
 
-    const creditHistory = await fetchContractPayments(rows, {
-      searchUrl: consultaUrl,
-      cookie,
-      viewState,
-      viewStateGenerator,
-      rfc: body.rfc,
-      clientCve,
-      clientNom,
-    })
+    const [employmentData, creditHistory] = await Promise.all([
+      fetchEmploymentData(employeeInfo.mtoPersonaUrl, cookie),
+      fetchContractPayments(rows, {
+        searchUrl: consultaUrl,
+        cookie,
+        viewState,
+        viewStateGenerator,
+        rfc: body.rfc,
+        clientCve,
+        clientNom,
+      }),
+    ])
 
     return createResponsePublic(200, {
       history: true,
-      operator: false,
+      operator: employmentData.puesto.trim().toLowerCase() === 'operador',
       activeCredit: Boolean(firstActive),
       balance: firstActive?.balance ?? 0,
       credit: firstActive?.creditId ?? '',
