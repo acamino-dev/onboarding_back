@@ -1,5 +1,5 @@
 import { AuthError } from '../../../../shared/constants/errors'
-import { extractHiddenField, stripTags, getInputValue } from './functions/parseHtml'
+import { extractHiddenField, getInputValue } from './functions/parseHtml'
 import { parseCreditTable, extractDeltaField } from './functions/parseCreditTable'
 import type { ParsedCreditRow } from './functions/parseCreditTable'
 
