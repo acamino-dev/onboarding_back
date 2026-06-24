@@ -35,6 +35,7 @@ const mockRows = [
 const mockCreditEntries = [
   {
     creditId: 'CRED-001',
+    periodicidad: 'QUINCENAL',
     payments: [
       {
         operationDate: '28/01/2024',

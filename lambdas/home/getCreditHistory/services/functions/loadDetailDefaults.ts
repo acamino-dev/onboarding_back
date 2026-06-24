@@ -7,6 +7,7 @@ const USER_AGENT =
 export type DetailDefaults = {
   viewState: string
   viewStateGenerator: string
+  periodicidad: string
   body: URLSearchParams
 }
 
@@ -24,6 +25,7 @@ export const loadDetailDefaults = async (
 
   const viewState = extractHiddenField(html, '__VIEWSTATE')
   const viewStateGenerator = extractHiddenField(html, '__VIEWSTATEGENERATOR')
+  const periodicidad = getInputValue(html, 'condiciones_txtPeriodicidad')
 
   // Echo the page's own pre-filled control values back in the Pagos search POST.
   const body = new URLSearchParams({
@@ -106,5 +108,5 @@ export const loadDetailDefaults = async (
     'ctl00$ContentPlaceHolder1$mpHoriz$Pagos$cmdBuscaPagosCancel': 'Buscar',
   })
 
-  return { viewState, viewStateGenerator, body }
+  return { viewState, viewStateGenerator, periodicidad, body }
 }

@@ -14,6 +14,7 @@ export type Payment = {
 
 export type CreditEntry = {
   creditId: string
+  periodicidad: string
   payments: Payment[]
 }
 

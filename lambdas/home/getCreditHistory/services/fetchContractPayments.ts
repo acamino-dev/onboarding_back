@@ -25,12 +25,17 @@ const EXCLUDED_CONTRACT_PREFIXES = ['af0', 'ap0', 'cs0']
 const USER_AGENT =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
+type SingleContractResult = {
+  periodicidad: string
+  payments: Payment[]
+}
+
 const fetchSingleContractPayments = async (
   args: ContractContext & { eventTarget: string }
-): Promise<Payment[]> => {
+): Promise<SingleContractResult> => {
   try {
     const detailUrl = await resolveDetailUrl(args)
-    const { body } = await loadDetailDefaults(detailUrl, args.cookie)
+    const { body, periodicidad } = await loadDetailDefaults(detailUrl, args.cookie)
 
     const response = await fetch(detailUrl, {
       method: 'POST',
@@ -47,7 +52,7 @@ const fetchSingleContractPayments = async (
 
     if (!response.ok) throw new Error(`pagos search failed with status ${response.status}`)
 
-    return parsePagosTable(await response.text())
+    return { periodicidad, payments: parsePagosTable(await response.text()) }
   } catch (error) {
     throw new Error(
       `Error on fetchContractPayments: ${error instanceof Error ? error.message : String(error)}`
@@ -69,8 +74,8 @@ export const fetchContractPayments = async (
           )
       )
       .map(async (row): Promise<CreditEntry> => {
-        if (!row.eventTarget) return { creditId: row.creditId, payments: [] }
-        const payments = await fetchSingleContractPayments({ ...context, eventTarget: row.eventTarget })
-        return { creditId: row.creditId, payments }
+        if (!row.eventTarget) return { creditId: row.creditId, periodicidad: '', payments: [] }
+        const { periodicidad, payments } = await fetchSingleContractPayments({ ...context, eventTarget: row.eventTarget })
+        return { creditId: row.creditId, periodicidad, payments }
       })
   )

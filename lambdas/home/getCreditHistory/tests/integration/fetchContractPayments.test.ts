@@ -36,7 +36,7 @@ describe('fetchContractPayments integration', () => {
     const entries = await fetchContractPayments(rows, context)
 
     for (const entry of entries) {
-      console.log(`\nCredit ${entry.creditId} — ${entry.payments.length} payment(s)`)
+      console.log(`\nCredit ${entry.creditId} — periodicidad: ${entry.periodicidad} — ${entry.payments.length} payment(s)`)
       if (entry.payments.length > 0) {
         console.table(entry.payments)
       }
