@@ -6,6 +6,7 @@ const USER_AGENT =
 
 export type EmployeeInfo = {
   empresa: string
+  mtoPersonaUrl: string
 }
 
 export const fetchEmployeeInfo = async (
@@ -74,7 +75,7 @@ export const fetchEmployeeInfo = async (
     const detailHtml = await detailResponse.text()
     const empresa = parseSelectedOption(detailHtml, 'ctl00_ContentPlaceHolder1_cmbForCont')
 
-    return { empresa }
+    return { empresa, mtoPersonaUrl }
   } catch (error) {
     if (error instanceof AuthError) throw error
     throw new Error(

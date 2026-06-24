@@ -31,6 +31,8 @@ describe('fetchEmployeeInfo integration', () => {
     expect(result).not.toBeNull()
     expect(typeof result!.empresa).toBe('string')
     expect(result!.empresa.length).toBeGreaterThan(0)
+    expect(typeof result!.mtoPersonaUrl).toBe('string')
+    expect(result!.mtoPersonaUrl.length).toBeGreaterThan(0)
   })
 
   it('returns null when RFC has no record in portal', async () => {
