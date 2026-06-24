@@ -1,4 +1,4 @@
-import type { CreditEntry } from '../../types/CreditHistoryResult'
+import type { CreditEntry } from '../types/CreditHistoryResult'
 
 const parseDate = (dateStr: string): Date | null => {
   const parts = dateStr.split('/')

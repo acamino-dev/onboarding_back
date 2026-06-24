@@ -1,7 +1,7 @@
 import type { Payment, CreditEntry } from '../types/CreditHistoryResult'
-import { resolveDetailUrl } from './functions/resolveDetailUrl'
-import { loadDetailDefaults } from './functions/loadDetailDefaults'
-import { parsePagosTable } from './functions/parseHtml'
+import { resolveDetailUrl } from '../functions/resolveDetailUrl'
+import { loadDetailDefaults } from '../functions/loadDetailDefaults'
+import { parsePagosTable } from '../functions/parseHtml'
 
 type CreditRow = {
   creditId: string

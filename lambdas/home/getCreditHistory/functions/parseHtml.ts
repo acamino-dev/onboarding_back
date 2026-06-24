@@ -1,4 +1,4 @@
-import type { Payment } from '../../types/CreditHistoryResult'
+import type { Payment } from '../types/CreditHistoryResult'
 
 export const extractHiddenField = (html: string, id: string): string => {
   const match =
