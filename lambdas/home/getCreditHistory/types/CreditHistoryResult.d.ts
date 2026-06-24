@@ -28,6 +28,7 @@ export type CreditHistoryResult =
       creditHistory: CreditEntry[]
       frequency: number
       daysPastDue: number
+      antiguedad: number
     }
   | {
       history: false
@@ -38,4 +39,5 @@ export type CreditHistoryResult =
       creditHistory: null
       frequency: null
       daysPastDue: null
+      antiguedad: null
     }

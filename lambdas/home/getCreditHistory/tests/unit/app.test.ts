@@ -89,6 +89,7 @@ describe('getCreditHistory', () => {
     expect(parsed.balance).toBe(5000)
     expect(parsed.company).toBe('EMPRESA TEST S.A. DE C.V.')
     expect(parsed.frequency).toBe(0)
+    expect(parsed.antiguedad).toBe(24)
     expect(parsed.creditHistory).toHaveLength(1)
     expect(parsed.creditHistory[0].creditId).toBe('CRED-001')
     expect(parsed.creditHistory[0].payments).toHaveLength(1)

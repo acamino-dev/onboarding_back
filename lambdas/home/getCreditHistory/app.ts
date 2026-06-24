@@ -22,6 +22,7 @@ const EMPTY_RESULT: CreditHistoryResult = {
   creditHistory: null,
   frequency: null,
   daysPastDue: null,
+  antiguedad: null,
 }
 
 export const lambdaHandler = async (
@@ -72,6 +73,7 @@ export const lambdaHandler = async (
       creditHistory,
       frequency: computeCreditFrequency(rows),
       daysPastDue: computeDaysPastDue(creditHistory),
+      antiguedad: employmentData.antiguedad,
     })
   } catch (e) {
     return handleError(e)
