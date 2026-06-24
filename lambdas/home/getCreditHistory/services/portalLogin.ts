@@ -3,7 +3,7 @@ import { httpsRequest } from './functions/httpsRequest'
 import { mergeCookies } from './functions/mergeCookies'
 import { extractHiddenField } from './functions/parseHtml'
 
-export { buildConsultaUrl } from './functions/buildConsultaUrl'
+export { buildConsultaUrl, buildCatPersonaUrl } from './functions/buildConsultaUrl'
 
 type ViewStateTokens = {
   __VIEWSTATE: string

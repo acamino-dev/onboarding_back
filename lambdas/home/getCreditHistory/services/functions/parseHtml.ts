@@ -22,6 +22,16 @@ export const getCheckedRadioValue = (html: string, nameSuffix: string): string =
   return match?.[1] ?? ''
 }
 
+const decodeHtmlEntities = (text: string): string =>
+  text.replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(parseInt(code, 10)))
+
+export const parseSelectedOption = (html: string, selectId: string): string => {
+  const selectMatch = html.match(new RegExp(`id="${selectId}"[^>]*>([\\s\\S]*?)<\\/select>`))
+  if (!selectMatch) return ''
+  const optionMatch = selectMatch[1].match(/<option[^>]*selected[^>]*>([^<]*)<\/option>/)
+  return decodeHtmlEntities(optionMatch?.[1]?.trim() ?? '')
+}
+
 export const parsePagosTable = (responseText: string): Payment[] => {
   const tableMatch = responseText.match(
     /<table[^>]*id="[^"]*gvPagosH"[^>]*>([\s\S]*?)<\/table>/
