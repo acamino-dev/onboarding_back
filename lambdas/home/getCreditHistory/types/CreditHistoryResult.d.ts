@@ -27,6 +27,7 @@ export type CreditHistoryResult =
       company: string
       creditHistory: CreditEntry[]
       frequency: number
+      daysPastDue: number
     }
   | {
       history: false
@@ -36,4 +37,5 @@ export type CreditHistoryResult =
       company: null
       creditHistory: null
       frequency: null
+      daysPastDue: null
     }

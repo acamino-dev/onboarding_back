@@ -8,6 +8,7 @@ import { fetchContractPayments } from './services/fetchContractPayments'
 import { fetchEmployeeInfo } from './services/fetchEmployeeInfo'
 import { fetchEmploymentData } from './services/fetchEmploymentData'
 import { computeCreditFrequency } from './services/functions/computeCreditFrequency'
+import { computeDaysPastDue } from './services/functions/computeDaysPastDue'
 import { validateBody } from './utils/validators'
 import type { CreditHistoryResult } from './types/CreditHistoryResult'
 import type { PortalSecret } from './types/PortalSecret'
@@ -20,6 +21,7 @@ const EMPTY_RESULT: CreditHistoryResult = {
   company: null,
   creditHistory: null,
   frequency: null,
+  daysPastDue: null,
 }
 
 export const lambdaHandler = async (
@@ -69,6 +71,7 @@ export const lambdaHandler = async (
       company: employeeInfo.empresa,
       creditHistory,
       frequency: computeCreditFrequency(rows),
+      daysPastDue: computeDaysPastDue(creditHistory),
     })
   } catch (e) {
     return handleError(e)
