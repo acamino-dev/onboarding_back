@@ -25,6 +25,7 @@ export type CreditHistoryResult =
       balance: number
       credit: string
       creditHistory: CreditEntry[]
+      frequency: number
     }
   | {
       history: false
@@ -33,4 +34,5 @@ export type CreditHistoryResult =
       balance: null
       credit: null
       creditHistory: null
+      frequency: null
     }

@@ -7,6 +7,7 @@ import { searchCreditsByRfc } from './services/searchCreditsByRfc'
 import { fetchContractPayments } from './services/fetchContractPayments'
 import { fetchEmployeeInfo } from './services/fetchEmployeeInfo'
 import { fetchEmploymentData } from './services/fetchEmploymentData'
+import { computeCreditFrequency } from './services/functions/computeCreditFrequency'
 import { validateBody } from './utils/validators'
 import type { CreditHistoryResult } from './types/CreditHistoryResult'
 
@@ -23,6 +24,7 @@ const EMPTY_RESULT: CreditHistoryResult = {
   balance: null,
   credit: null,
   creditHistory: null,
+  frequency: null,
 }
 
 export const lambdaHandler = async (
@@ -71,6 +73,7 @@ export const lambdaHandler = async (
       balance: firstActive?.balance ?? 0,
       credit: firstActive?.creditId ?? '',
       creditHistory,
+      frequency: computeCreditFrequency(rows),
     })
   } catch (e) {
     return handleError(e)

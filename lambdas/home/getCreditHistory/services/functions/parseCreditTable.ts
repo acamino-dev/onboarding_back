@@ -6,6 +6,8 @@ export type ParsedCreditRow = {
   status: string
   balance: number
   eventTarget: string
+  fechaPrimerPago: string
+  fechaUltimoPago: string
 }
 
 const extractSpanText = (html: string, idSuffix: string): string => {
@@ -41,6 +43,8 @@ export const parseCreditTable = (responseText: string): ParsedCreditRow[] => {
       creditId: cells[0],
       status: cells[8],
       balance: parseBalance(extractSpanText(rowHtml, 'lblMonto2')),
+      fechaPrimerPago: cells[6] ?? '',
+      fechaUltimoPago: cells[7] ?? '',
       // The link's __doPostBack arg; quotes arrive HTML-encoded (&#39;) in the
       // async-postback delta, plain (') in a full page.
       eventTarget:
