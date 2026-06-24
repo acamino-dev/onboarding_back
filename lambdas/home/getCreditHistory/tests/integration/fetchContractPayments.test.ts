@@ -3,16 +3,11 @@ import { loginToPortal, buildConsultaUrl } from '../../services/portalLogin'
 import { searchCreditsByRfc, type ParsedCreditRow } from '../../services/searchCreditsByRfc'
 import { fetchContractPayments, type ContractContext } from '../../services/fetchContractPayments'
 import { TEST_RFC_VALID } from './helpers/constants'
+import type { PortalSecret } from '../../types/PortalSecret'
 
 jest.setTimeout(120000)
 
 const PORTAL_SECRET_ARN = process.env.PORTAL_SECRET_ARN as string
-
-type PortalSecret = {
-  user: string
-  password: string
-  url: string
-}
 
 describe('fetchContractPayments integration', () => {
   let context: ContractContext

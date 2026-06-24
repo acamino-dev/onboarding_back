@@ -1,13 +1,8 @@
 import { getSecret } from '../../../../../shared/utils/secrets'
 import { loginToPortal } from '../../services/portalLogin'
+import type { PortalSecret } from '../../types/PortalSecret'
 
 const PORTAL_SECRET_ARN = process.env.PORTAL_SECRET_ARN as string
-
-type PortalSecret = {
-  user: string
-  password: string
-  url: string
-}
 
 describe('loginToPortal integration', () => {
   it('completes login and returns session cookie with .ASPXAUTH', async () => {

@@ -4,14 +4,9 @@ import { fetchEmployeeInfo } from '../../services/fetchEmployeeInfo'
 import { fetchEmploymentData } from '../../services/fetchEmploymentData'
 import { AuthError } from '../../../../../shared/constants/errors'
 import { TEST_RFC_VALID } from './helpers/constants'
+import type { PortalSecret } from '../../types/PortalSecret'
 
 const PORTAL_SECRET_ARN = process.env.PORTAL_SECRET_ARN as string
-
-type PortalSecret = {
-  user: string
-  password: string
-  url: string
-}
 
 describe('fetchEmploymentData integration', () => {
   let cookie: string

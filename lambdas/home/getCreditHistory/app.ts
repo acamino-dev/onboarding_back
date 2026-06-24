@@ -10,19 +10,14 @@ import { fetchEmploymentData } from './services/fetchEmploymentData'
 import { computeCreditFrequency } from './services/functions/computeCreditFrequency'
 import { validateBody } from './utils/validators'
 import type { CreditHistoryResult } from './types/CreditHistoryResult'
-
-type PortalSecret = {
-  user: string
-  password: string
-  url: string
-}
+import type { PortalSecret } from './types/PortalSecret'
 
 const EMPTY_RESULT: CreditHistoryResult = {
   history: false,
   operator: null,
   activeCredit: null,
   balance: null,
-  credit: null,
+  company: null,
   creditHistory: null,
   frequency: null,
 }
@@ -71,7 +66,7 @@ export const lambdaHandler = async (
       operator: employmentData.puesto.trim().toLowerCase() === 'operador',
       activeCredit: Boolean(firstActive),
       balance: firstActive?.balance ?? 0,
-      credit: firstActive?.creditId ?? '',
+      company: employeeInfo.empresa,
       creditHistory,
       frequency: computeCreditFrequency(rows),
     })

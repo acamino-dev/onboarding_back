@@ -23,7 +23,7 @@ export type CreditHistoryResult =
       operator: boolean
       activeCredit: boolean
       balance: number
-      credit: string
+      company: string
       creditHistory: CreditEntry[]
       frequency: number
     }
@@ -32,7 +32,7 @@ export type CreditHistoryResult =
       operator: null
       activeCredit: null
       balance: null
-      credit: null
+      company: null
       creditHistory: null
       frequency: null
     }
