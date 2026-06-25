@@ -7,6 +7,9 @@ paths:
   /home/getCreditHistory:
     post:
       summary: Scrapes portal and returns client credit history by RFC
+      description: |
+        Internal Lambda — no API Gateway trigger. Invoked directly via Lambda:InvokeFunction
+        by requestCreditHistory. RFC is trusted as already validated and verified by the caller.
       requestBody:
         required: true
         content:
@@ -36,8 +39,7 @@ components:
       properties:
         rfc:
           type: string
-          description: Mexican RFC with homoclave (12 chars for moral, 13 for física)
-          pattern: '^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$'
+          description: Mexican RFC with homoclave (12 chars for moral, 13 for física) — format already validated by requestCreditHistory
 
     Payment:
       type: object
@@ -145,10 +147,9 @@ components:
         errorCode:
           type: integer
           description: |
-            702 – validation error (invalid RFC format or empty body)
             703 – portal login or session error
             708 – scraping or infrastructure error (includes missing PORTAL_SECRET_ARN)
-          enum: [702, 703, 708]
+          enum: [703, 708]
         errorId:
           type: string
           description: 8-character hex error ID for tracing

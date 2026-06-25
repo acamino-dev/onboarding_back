@@ -115,24 +115,6 @@ describe('getCreditHistory', () => {
     expect(parsed.creditHistory).toBeNull()
   })
 
-  it('should return 400 with errorCode 702 when RFC format is invalid', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({ rfc: 'INVALID123' }) }
-    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 400 with errorCode 702 when rfc field is missing', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({}) }
-    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
   it('should return 400 with errorCode 703 when portal login fails', async () => {
     const { AuthError } = await import('../../../../../shared/constants/errors')
     mockLoginToPortal.mockRejectedValue(new AuthError('Portal login failed'))

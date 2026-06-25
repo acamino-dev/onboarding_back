@@ -9,7 +9,6 @@ import { fetchEmployeeInfo } from './services/fetchEmployeeInfo'
 import { fetchEmploymentData } from './services/fetchEmploymentData'
 import { computeCreditFrequency } from './functions/computeCreditFrequency'
 import { computeDaysPastDue } from './functions/computeDaysPastDue'
-import { validateBody } from './utils/validators'
 import type { CreditHistoryResult } from './types/CreditHistoryResult'
 import type { PortalSecret } from './types/PortalSecret'
 
@@ -32,7 +31,7 @@ export const lambdaHandler = async (
     const PORTAL_SECRET_ARN = process.env.PORTAL_SECRET_ARN
     if (!PORTAL_SECRET_ARN) throw new Error('PORTAL_SECRET_ARN is not set')
 
-    const body = validateBody(event.body ?? '')
+    const body = JSON.parse(event.body ?? '') as { rfc: string }
 
     const rawSecret = await getSecret(PORTAL_SECRET_ARN)
     const { user, password, url } = JSON.parse(rawSecret) as PortalSecret
