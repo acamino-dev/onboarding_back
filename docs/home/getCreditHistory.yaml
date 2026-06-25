@@ -44,14 +44,47 @@ components:
       properties:
         operationDate:
           type: string
+          description: Date the payment was processed (DD/MM/YYYY)
+        valueDate:
+          type: string
+          description: Value date of the transaction (DD/MM/YYYY)
+        amount:
+          type: string
+          description: Payment amount as string from portal
+        concept:
+          type: string
+          description: Payment concept, e.g. "PAGO 1 de 12"
         dueDate:
           type: string
+          description: Due date for the installment (DD/MM/YYYY)
+        paymentType:
+          type: string
+          description: Type of payment
+        invoice:
+          type: string
+          description: Invoice reference
+        capital:
+          type: string
+          description: Capital component of the payment
+        interest:
+          type: string
+          description: Interest component of the payment
+        iva:
+          type: string
+          description: IVA (tax) component of the payment
+        total:
+          type: string
+          description: Total amount of the payment
 
     CreditEntry:
       type: object
       properties:
         creditId:
           type: string
+          description: Portal credit identifier
+        periodicidad:
+          type: string
+          description: Payment frequency from portal (e.g. "SEMANAL", "QUINCENAL")
         payments:
           type: array
           items:
@@ -66,20 +99,42 @@ components:
         operator:
           type: boolean
           nullable: true
+          description: true if employee's puesto (position) is "operador"
         activeCredit:
           type: boolean
           nullable: true
+          description: true if at least one credit with status ACTIVO exists
         balance:
           type: number
           nullable: true
-        credit:
+          description: Balance of the first active credit, or 0 if none active
+        company:
           type: string
           nullable: true
+          description: Employee's company name from the portal (empresa field)
         creditHistory:
           type: array
           nullable: true
           items:
             $ref: '#/components/schemas/CreditEntry'
+        frequency:
+          type: number
+          nullable: true
+          description: |
+            Max month gap between consecutive credits (ACTIVO or TERMINADO status),
+            sorted by first payment date. 0 if fewer than 2 eligible credits.
+        daysPastDue:
+          type: number
+          nullable: true
+          description: |
+            Average days past due across all overdue payments.
+            Grace period: 7 days for SEMANAL, 15 days for all others.
+            Also accounts for pending installments not yet paid.
+            0 if no overdue payments found.
+        antiguedad:
+          type: number
+          nullable: true
+          description: Employee seniority as numeric value from portal (txtAntiguedad field)
 
     ErrorResponse:
       type: object
@@ -90,9 +145,9 @@ components:
         errorCode:
           type: integer
           description: |
-            702 – validation error (invalid RFC format)
-            703 – portal login failed
-            708 – scraping or infrastructure error
+            702 – validation error (invalid RFC format or empty body)
+            703 – portal login or session error
+            708 – scraping or infrastructure error (includes missing PORTAL_SECRET_ARN)
           enum: [702, 703, 708]
         errorId:
           type: string
