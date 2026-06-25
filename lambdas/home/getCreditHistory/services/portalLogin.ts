@@ -20,7 +20,11 @@ const extractViewStateTokens = (html: string): ViewStateTokens => ({
 export const loginToPortal = async (url: string, user: string, password: string): Promise<string> => {
   const loginPage = await httpsRequest(url, { method: 'GET' })
   if (loginPage.statusCode !== 200) {
-    throw new AuthError('Portal login failed: could not load login page')
+    throw new AuthError('Portal login failed: could not load login page', {
+      file: 'lambdas/home/getCreditHistory/services/portalLogin.ts',
+      function: 'loginToPortal',
+      operation: 'load login page',
+    })
   }
 
   let cookies = loginPage.cookies
@@ -50,7 +54,11 @@ export const loginToPortal = async (url: string, user: string, password: string)
   })
 
   if (postResult.statusCode !== 200 && postResult.statusCode !== 302) {
-    throw new AuthError(`Portal login failed: unexpected status ${postResult.statusCode}`)
+    throw new AuthError(`Portal login failed: unexpected status ${postResult.statusCode}`, {
+      file: 'lambdas/home/getCreditHistory/services/portalLogin.ts',
+      function: 'loginToPortal',
+      operation: 'submit login form',
+    })
   }
 
   cookies = mergeCookies(cookies, postResult.cookies)

@@ -15,11 +15,20 @@ export const fetchEmploymentData = async (
 ): Promise<EmploymentData> => {
   try {
     const getResponse = await fetch(mtoPersonaUrl, { headers: { Cookie: cookie } })
-    if (!getResponse.ok) throw new AuthError('Could not load mtoPersona page')
+    if (!getResponse.ok)
+      throw new AuthError('Could not load mtoPersona page', {
+        file: 'lambdas/home/getCreditHistory/services/fetchEmploymentData.ts',
+        function: 'fetchEmploymentData',
+        operation: 'load mtoPersona page',
+      })
 
     const pageHtml = await getResponse.text()
     if (pageHtml.includes('Login1_UserName')) {
-      throw new AuthError('Portal login failed: session cookie missing .ASPXAUTH')
+      throw new AuthError('Portal login failed: session cookie missing .ASPXAUTH', {
+        file: 'lambdas/home/getCreditHistory/services/fetchEmploymentData.ts',
+        function: 'fetchEmploymentData',
+        operation: 'validate session cookie',
+      })
     }
 
     const viewState = extractHiddenField(pageHtml, '__VIEWSTATE')

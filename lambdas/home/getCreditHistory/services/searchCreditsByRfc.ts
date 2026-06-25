@@ -23,11 +23,20 @@ export const searchCreditsByRfc = async (
 ): Promise<SearchResult> => {
   try {
     const getResponse = await fetch(consultaUrl, { headers: { Cookie: cookie } })
-    if (!getResponse.ok) throw new AuthError('Could not load consulta page')
+    if (!getResponse.ok)
+      throw new AuthError('Could not load consulta page', {
+        file: 'lambdas/home/getCreditHistory/services/searchCreditsByRfc.ts',
+        function: 'searchCreditsByRfc',
+        operation: 'load consulta page',
+      })
 
     const pageHtml = await getResponse.text()
     if (pageHtml.includes('Login1_UserName')) {
-      throw new AuthError('Portal login failed: session cookie missing .ASPXAUTH')
+      throw new AuthError('Portal login failed: session cookie missing .ASPXAUTH', {
+        file: 'lambdas/home/getCreditHistory/services/searchCreditsByRfc.ts',
+        function: 'searchCreditsByRfc',
+        operation: 'validate session cookie',
+      })
     }
 
     const viewState = extractHiddenField(pageHtml, '__VIEWSTATE')
