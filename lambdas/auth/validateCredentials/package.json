@@ -1,5 +1,5 @@
 {
-  "name": "auth-validate-credentials",
+  "name": "auth-validate-credentials-authorizer",
   "version": "1.0.0",
   "private": true,
   "scripts": {
