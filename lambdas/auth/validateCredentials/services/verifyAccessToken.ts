@@ -20,7 +20,7 @@ export const verifyAccessToken = async (
     const secretString = await getSecret(jwtSecretArn)
     const { secret } = JSON.parse(secretString) as JwtSecret
 
-    const decoded = jwt.verify(token, secret) as jwt.JwtPayload
+    const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as jwt.JwtPayload
 
     return {
       userId: decoded.sub as string,

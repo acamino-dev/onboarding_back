@@ -11,7 +11,7 @@ beforeAll(async () => {
   )
   await db.query(
     'INSERT INTO users (id, employee_id, company_id, email, password_hash, otp_verified) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING',
-    [SEEDED_USER_ID, EMPLOYEES.withUser.id, TEST_COMPANY_ID, EMPLOYEES.withUser.email, 'placeholder_hash', false]
+    [SEEDED_USER_ID, EMPLOYEES.withUser.id, TEST_COMPANY_ID, EMPLOYEES.withUser.email, 'placeholder_hash', true]
   )
 })
 

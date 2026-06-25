@@ -15,7 +15,7 @@ export const signAccessToken = async (
     const secretString = await getSecret(jwtSecretArn)
     const { secret } = JSON.parse(secretString) as JwtSecret
 
-    return jwt.sign({ sub: userId, email, companyId }, secret, { expiresIn: '1h' })
+    return jwt.sign({ sub: userId, email, companyId }, secret, { algorithm: 'HS256', expiresIn: '1h' })
   } catch (error) {
     throw new Error(`Error on signAccessToken: ${error instanceof Error ? error.message : String(error)}`)
   }
