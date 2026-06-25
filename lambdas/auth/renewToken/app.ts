@@ -1,11 +1,10 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { createHash } from 'crypto'
 import { handleError } from '../../../shared/utils/handleError'
-import { deleteRefreshToken } from './services/deleteRefreshToken'
 import { findRefreshToken } from './services/findRefreshToken'
 import { findUser } from './services/findUser'
+import { rotateRefreshToken } from './services/rotateRefreshToken'
 import { signAccessToken } from './services/signAccessToken'
-import { storeRefreshToken } from './services/storeRefreshToken'
 import { generateRefreshToken } from './utils/generateRefreshToken'
 import { validateRequest } from './utils/validators'
 
@@ -29,10 +28,8 @@ export const lambdaHandler = async (
 
     const { email, companyId } = await findUser(userId)
 
-    await deleteRefreshToken(oldTokenHash, REFRESH_TOKENS_TABLE_NAME)
-
     const { rawToken, tokenHash: newTokenHash } = generateRefreshToken()
-    await storeRefreshToken(newTokenHash, userId, REFRESH_TOKENS_TABLE_NAME)
+    await rotateRefreshToken(oldTokenHash, newTokenHash, userId, REFRESH_TOKENS_TABLE_NAME)
 
     const newAccessToken = await signAccessToken(userId, email, companyId, JWT_SECRET_ARN)
 

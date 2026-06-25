@@ -19,6 +19,9 @@ import {
   UpdateCommand,
   UpdateCommandInput,
   UpdateCommandOutput,
+  TransactWriteCommand,
+  TransactWriteCommandInput,
+  TransactWriteCommandOutput,
 } from "@aws-sdk/lib-dynamodb"
 
 const client = new DynamoDBClient({})
@@ -37,6 +40,8 @@ export const dynamoDb = {
     documentClient.send(new UpdateCommand(params)),
   delete: (params: DeleteCommandInput): Promise<DeleteCommandOutput> =>
     documentClient.send(new DeleteCommand(params)),
+  transactWrite: (params: TransactWriteCommandInput): Promise<TransactWriteCommandOutput> =>
+    documentClient.send(new TransactWriteCommand(params)),
 }
 
 export type Company = {

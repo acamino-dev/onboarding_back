@@ -8,13 +8,6 @@ paths:
     post:
       summary: Verifies refresh token, rotates it, and issues a new access token
       parameters:
-        - in: header
-          name: Authorization
-          required: true
-          schema:
-            type: string
-            example: Bearer <expiredAccessToken>
-          description: Expired (or valid) JWT — must have a valid signature
         - in: cookie
           name: refreshToken
           required: true
@@ -62,8 +55,8 @@ components:
           type: integer
           description: |
             Internal error code:
-            702 – validation error (missing/malformed Authorization header or refreshToken cookie)
-            703 – auth error (invalid token signature or refresh token not found/expired)
+            702 – validation error (missing or empty refreshToken cookie)
+            703 – auth error (refresh token not found, expired, or already consumed by a concurrent request)
             708 – generic error (infrastructure failure)
           enum: [702, 703, 708]
         errorId:
