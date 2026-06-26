@@ -7,6 +7,18 @@ describe('invokeCreditHistory integration', () => {
   it('happy path — returns CreditHistoryResult shape for a known RFC', async () => {
     const result = await invokeCreditHistory(TEST_EMPLOYEE.rfc, FUNCTION_NAME)
 
+    console.table([result].map(r => ({
+      history: r.history,
+      operator: r.operator,
+      activeCredit: r.activeCredit,
+      balance: r.balance,
+      company: r.company,
+      frequency: r.frequency,
+      daysPastDue: r.daysPastDue,
+      antiguedad: r.antiguedad,
+      creditHistoryCount: Array.isArray(r.creditHistory) ? r.creditHistory.length : r.creditHistory,
+    })))
+
     expect(typeof result.history).toBe('boolean')
 
     if (result.history) {
