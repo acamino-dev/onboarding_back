@@ -18,12 +18,19 @@ export type CreditEntry = {
   payments: Payment[]
 }
 
+export type ActiveCreditBalance = {
+  creditId: string
+  balance: number
+  lastPayment: string | null
+  nextPaymentDate: string | null
+}
+
 export type CreditHistoryResult =
   | {
       history: true
       operator: boolean
       activeCredit: boolean
-      balance: number
+      balance: ActiveCreditBalance[]
       company: string
       creditHistory: CreditEntry[]
       frequency: number

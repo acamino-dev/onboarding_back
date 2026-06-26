@@ -9,6 +9,7 @@ import { fetchEmployeeInfo } from './services/fetchEmployeeInfo'
 import { fetchEmploymentData } from './services/fetchEmploymentData'
 import { computeCreditFrequency } from './functions/computeCreditFrequency'
 import { computeDaysPastDue } from './functions/computeDaysPastDue'
+import { computeNextPaymentDate } from './functions/computeNextPaymentDate'
 import type { CreditHistoryResult } from './types/CreditHistoryResult'
 import type { PortalSecret } from './types/PortalSecret'
 
@@ -48,7 +49,6 @@ export const lambdaHandler = async (
     if (!employeeInfo || searchResult.rows.length === 0) return createResponsePublic(200, EMPTY_RESULT)
 
     const { rows, viewState, viewStateGenerator, clientCve, clientNom } = searchResult
-    const firstActive = rows.find((row) => row.status === 'ACTIVO')
 
     const [employmentData, creditHistory] = await Promise.all([
       fetchEmploymentData(employeeInfo.mtoPersonaUrl, cookie),
@@ -63,11 +63,20 @@ export const lambdaHandler = async (
       }),
     ])
 
+    const activeBalances = rows
+      .filter((row) => row.status === 'ACTIVO')
+      .map((row) => {
+        const entry = creditHistory.find((e) => e.creditId === row.creditId)
+        const lastPayment = entry?.payments.at(-1)?.concept ?? null
+        const nextPaymentDate = entry ? computeNextPaymentDate(entry) : null
+        return { creditId: row.creditId, balance: row.balance, lastPayment, nextPaymentDate }
+      })
+
     return createResponsePublic(200, {
       history: true,
       operator: employmentData.puesto.trim().toLowerCase() === 'operador',
-      activeCredit: Boolean(firstActive),
-      balance: firstActive?.balance ?? 0,
+      activeCredit: activeBalances.length > 0,
+      balance: activeBalances,
       company: employeeInfo.empresa,
       creditHistory,
       frequency: computeCreditFrequency(rows),

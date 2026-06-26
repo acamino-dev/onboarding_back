@@ -86,7 +86,7 @@ describe('getCreditHistory', () => {
     expect(parsed.history).toBe(true)
     expect(parsed.operator).toBe(false)
     expect(parsed.activeCredit).toBe(true)
-    expect(parsed.balance).toBe(5000)
+    expect(parsed.balance).toEqual([{ creditId: 'CRED-001', balance: 5000, lastPayment: 'PAGO 1   de 12', nextPaymentDate: '15/11/2023' }])
     expect(parsed.company).toBe('EMPRESA TEST S.A. DE C.V.')
     expect(parsed.frequency).toBe(0)
     expect(parsed.antiguedad).toBe(24)

@@ -4,6 +4,7 @@ import { searchCreditsByRfc, type ParsedCreditRow } from '../../services/searchC
 import { fetchContractPayments, type ContractContext } from '../../services/fetchContractPayments'
 import { computeCreditFrequency } from '../../functions/computeCreditFrequency'
 import { computeDaysPastDue } from '../../functions/computeDaysPastDue'
+import { computeNextPaymentDate } from '../../functions/computeNextPaymentDate'
 import type { CreditEntry } from '../../types/CreditHistoryResult'
 import { TEST_RFC_VALID } from './helpers/constants'
 import type { PortalSecret } from '../../types/PortalSecret'
@@ -62,5 +63,30 @@ describe('computeFunctions integration', () => {
 
     expect(typeof daysPastDue).toBe('number')
     expect(daysPastDue).toBeGreaterThanOrEqual(0)
+  })
+
+  it('activeBalances maps ACTIVO credits with last payment and next payment date', () => {
+    const activeBalances = rows
+      .filter((row) => row.status === 'ACTIVO')
+      .map((row) => {
+        const entry = creditHistory.find((e) => e.creditId === row.creditId)
+        const lastPayment = entry?.payments.at(-1)?.concept ?? null
+        const nextPaymentDate = entry ? computeNextPaymentDate(entry) : null
+        return { creditId: row.creditId, balance: row.balance, lastPayment, nextPaymentDate }
+      })
+
+    console.log('\nActive credit balances:')
+    console.table(activeBalances)
+
+    expect(Array.isArray(activeBalances)).toBe(true)
+    for (const item of activeBalances) {
+      expect(typeof item.creditId).toBe('string')
+      expect(typeof item.balance).toBe('number')
+      expect(item.lastPayment === null || typeof item.lastPayment === 'string').toBe(true)
+      expect(item.nextPaymentDate === null || typeof item.nextPaymentDate === 'string').toBe(true)
+      if (item.nextPaymentDate !== null) {
+        expect(item.nextPaymentDate).toMatch(/^\d{2}\/\d{2}\/\d{4}$/)
+      }
+    }
   })
 })

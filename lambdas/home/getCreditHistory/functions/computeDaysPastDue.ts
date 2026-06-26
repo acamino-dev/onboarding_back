@@ -63,5 +63,5 @@ export const computeDaysPastDue = (creditHistory: CreditEntry[]): number => {
   }
 
   if (moraDays.length === 0) return 0
-  return moraDays.reduce((sum, d) => sum + d, 0) / moraDays.length
+  return Math.floor(moraDays.reduce((sum, d) => sum + d, 0) / moraDays.length)
 }
