@@ -9,14 +9,14 @@ cached = true
 parallel = true
 
 [dev.local_start_api.parameters]
-parameter_overrides = "Environment=Dev DevUserId=37778f25-160d-4673-8fd2-340abdb828b6 DevTestRfc=TESE870227M20"
+parameter_overrides = "Environment=Dev DevUserId=37778f25-160d-4673-8fd2-340abdb828b6 DevTestRfc=GOGE9702076TA"
 
 [dev.deploy.parameters]
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "us-east-1"
-parameter_overrides = "Environment=Dev LambdaSubnetIds=subnet-0b0abc2587fd5eb54 LambdaSecurityGroupIds=sg-02460aaaf2d9e95a0 DevTestRfc=GOGE9702076TA"
+parameter_overrides = "Environment=Dev LambdaSubnetIds=subnet-0b0abc2587fd5eb54 LambdaSecurityGroupIds=sg-02460aaaf2d9e95a0"
 
 [prod]
 [prod.global.parameters]
