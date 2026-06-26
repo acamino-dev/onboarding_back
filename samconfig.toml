@@ -8,8 +8,8 @@ stack_name = "acamino-onboarding-dev"
 cached = true
 parallel = true
 
-[dev.local.parameters]
-parameter_overrides = "Environment=Dev"
+[dev.local_start_api.parameters]
+parameter_overrides = "Environment=Dev DevUserId=37778f25-160d-4673-8fd2-340abdb828b6 DevTestRfc=RIRA950505SVA"
 
 [dev.deploy.parameters]
 capabilities = "CAPABILITY_IAM"

@@ -27,11 +27,12 @@ export const lambdaHandler = async (
     const authContext = (event.requestContext as unknown as { authorizer?: { lambda?: Record<string, string> } })
       ?.authorizer?.lambda
 
-    if (!authContext?.userId) throw new AuthError('Missing auth context')
+    const userId = authContext?.userId || process.env.DEV_USER_ID
+    if (!userId) throw new AuthError('Missing auth context')
 
-    const rfc = await getUserRfc(authContext.userId)
+    const rfc = await getUserRfc(userId)
 
-    const cached = await getCachedAnalysis(authContext.userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
+    const cached = await getCachedAnalysis(userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
     if (cached) return createResponsePublic(200, cached)
 
     const rfcToQuery = process.env.DEV_TEST_RFC || rfc
@@ -43,7 +44,7 @@ export const lambdaHandler = async (
         ? { type: 'active_credit', balance: creditHistory.balance, analyzedAt }
         : { type: 'offer', creditOffer: creditEngine(creditHistory), analyzedAt }
 
-    await storeAnalysis(authContext.userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME, result)
+    await storeAnalysis(userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME, result)
 
     return createResponsePublic(200, result)
   } catch (e) {
