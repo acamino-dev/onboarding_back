@@ -37,7 +37,8 @@ export const lambdaHandler = async (
     const cached = await getCachedAnalysis(authContext.userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
     if (cached) return createResponsePublic(200, cached)
 
-    const creditHistory = await invokeCreditHistory(body.rfc, GET_CREDIT_HISTORY_FUNCTION_NAME)
+    const rfcToQuery = process.env.DEV_TEST_RFC || body.rfc
+    const creditHistory = await invokeCreditHistory(rfcToQuery, GET_CREDIT_HISTORY_FUNCTION_NAME)
 
     const analyzedAt = new Date().toISOString()
     const result: AnalysisResponse =

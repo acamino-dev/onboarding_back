@@ -34,6 +34,10 @@ Parameters:
     Type: String
     Description: Frontend URL for CORS
     Default: http://localhost:3000
+  DevTestRfc:
+    Type: String
+    Description: RFC de pruebas para dev — sustituye el RFC real al invocar getCreditHistory
+    Default: ""
 
 Resources:
   CompaniesTable:
@@ -591,6 +595,7 @@ Resources:
           DB_SECRET_ID: !Sub onBoardingCredentials${Environment}
           CREDIT_HISTORY_REQUESTS_TABLE_NAME: !Sub onboardingCreditHistoryRequestsDB${Environment}
           GET_CREDIT_HISTORY_FUNCTION_NAME: !Sub onboardingGetCreditHistory${Environment}
+          DEV_TEST_RFC: !Ref DevTestRfc
       Policies:
         - Statement:
             - Effect: Allow
