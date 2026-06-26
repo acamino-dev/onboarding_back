@@ -37,6 +37,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: >
+            JWT missing or invalid — emitted by the Lambda authorizer at the
+            API Gateway layer before this function is invoked. Does NOT follow
+            the { errorCode, errorId } convention; body is empty or a plain
+            Gateway message. Treat as unauthenticated.
+        "403":
+          description: >
+            JWT present but authorizer denied access — same infrastructure
+            layer as 401. Does NOT follow the { errorCode, errorId } convention.
 
 components:
   schemas:
