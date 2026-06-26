@@ -42,6 +42,10 @@ Parameters:
     Type: String
     Description: userId de pruebas para dev — bypass del authorizer context en SAM local
     Default: ""
+  DevUserEmail:
+    Type: String
+    Description: email de pruebas para dev — bypass del authorizer context en SAM local
+    Default: ""
 
 Resources:
   CompaniesTable:
@@ -634,6 +638,36 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - lambdas/home/requestCreditHistory/app.ts
+        External:
+          - "@aws-sdk/*"
+
+  GetUserInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingGetUserInfo${Environment}
+      CodeUri: ./
+      Handler: lambdas/home/getUserInfo/app.lambdaHandler
+      Description: Returns user info from auth context
+      Environment:
+        Variables:
+          DEV_USER_EMAIL: !Ref DevUserEmail
+      Policies:
+        - VPCAccessPolicy: {}
+      Events:
+        GetUserInfo:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /home/user/info
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/home/getUserInfo/app.ts
         External:
           - "@aws-sdk/*"
 

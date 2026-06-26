@@ -9,7 +9,7 @@ cached = true
 parallel = true
 
 [dev.local_start_api.parameters]
-parameter_overrides = "Environment=Dev DevUserId=37778f25-160d-4673-8fd2-340abdb828b6 DevTestRfc=GOGE9702076TA"
+parameter_overrides = "Environment=Dev DevUserId=37778f25-160d-4673-8fd2-340abdb828b6 DevTestRfc=GOGE9702076TA DevUserEmail=erick.gnz97@gmail.com"
 
 [dev.deploy.parameters]
 capabilities = "CAPABILITY_IAM"

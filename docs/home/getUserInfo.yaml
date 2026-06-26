@@ -1,0 +1,50 @@
+openapi: 3.0.3
+info:
+  title: getUserInfo
+  version: 1.0.0
+
+paths:
+  /home/user/info:
+    post:
+      summary: Returns the authenticated user's email from auth context
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Authenticated user's email address
+          example: user@acamino.com
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            703 – missing or invalid auth context
+            708 – generic internal error
+          enum: [703, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
