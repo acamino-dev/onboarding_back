@@ -37,8 +37,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Missing or invalid JWT — rejected by the Lambda authorizer before reaching this function
 
 components:
   schemas:
