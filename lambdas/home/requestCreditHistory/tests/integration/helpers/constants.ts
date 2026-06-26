@@ -3,7 +3,7 @@ export const TEST_COMPANY_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 export const TEST_EMPLOYEE = {
   id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
   employee_number: 'EMP-TEST-001',
-  rfc: 'TESE870227M20',
+  rfc: 'RIRA950505SVA',
   company_id: TEST_COMPANY_ID,
   is_active: true,
 } as const
