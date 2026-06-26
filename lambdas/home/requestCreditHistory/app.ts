@@ -2,8 +2,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from '
 import { createResponsePublic } from '../../../shared/utils/createResponse'
 import { handleError } from '../../../shared/utils/handleError'
 import { AuthError } from '../../../shared/constants/errors'
-import { validateBody } from './utils/validators'
-import { verifyUserRfc } from './services/verifyUserRfc'
+import { getUserRfc } from './services/getUserRfc'
 import { getCachedAnalysis } from './services/getCachedAnalysis'
 import { storeAnalysis } from './services/storeAnalysis'
 import { invokeCreditHistory } from './services/invokeCreditHistory'
@@ -30,14 +29,12 @@ export const lambdaHandler = async (
 
     if (!authContext?.userId) throw new AuthError('Missing auth context')
 
-    const body = validateBody(event.body ?? '')
-
-    await verifyUserRfc(authContext.userId, body.rfc)
+    const rfc = await getUserRfc(authContext.userId)
 
     const cached = await getCachedAnalysis(authContext.userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
     if (cached) return createResponsePublic(200, cached)
 
-    const rfcToQuery = process.env.DEV_TEST_RFC || body.rfc
+    const rfcToQuery = process.env.DEV_TEST_RFC || rfc
     const creditHistory = await invokeCreditHistory(rfcToQuery, GET_CREDIT_HISTORY_FUNCTION_NAME)
 
     const analyzedAt = new Date().toISOString()

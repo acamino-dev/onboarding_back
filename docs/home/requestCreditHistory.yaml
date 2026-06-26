@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: requestCreditHistory
-  version: 2.0.0
+  version: 3.0.0
 
 security:
   - bearerAuth: []
@@ -12,15 +12,10 @@ paths:
       security:
         - bearerAuth: []
       summary: >
-        Verify RFC against JWT credentials and return a credit analysis.
+        Return a credit analysis for the authenticated user. The RFC is
+        resolved internally from the JWT userId — no body is required.
         Results are cached in DynamoDB for 30 days — subsequent calls within
         that window return the cached result without re-invoking the portal.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RequestBody'
       responses:
         "200":
           description: >
@@ -50,17 +45,6 @@ paths:
 
 components:
   schemas:
-    RequestBody:
-      type: object
-      required:
-        - rfc
-      properties:
-        rfc:
-          type: string
-          description: Mexican RFC — 12 or 13 characters
-          pattern: '^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$'
-          example: GOAM860519H45
-
     SuccessResponse:
       oneOf:
         - $ref: '#/components/schemas/ActiveCreditResponse'
@@ -229,8 +213,8 @@ components:
         description: >
           JWT issued by the auth module. Validated by a Lambda authorizer
           attached to the HTTP API Gateway route. The authorizer injects
-          `userId` into the request context — this lambda uses it to verify
-          that the RFC in the body belongs to the authenticated user.
+          `userId` into the request context — this lambda uses it to look up
+          the employee's RFC from the database.
 
     ErrorResponse:
       type: object
@@ -242,11 +226,9 @@ components:
           type: integer
           description: |
             Internal error code:
-            702 – validation error (invalid or missing rfc)
-            703 – auth error (rfc does not match JWT user)
-            705 – not found (employee record not found)
+            705 – not found (no active employee record for the authenticated user)
             708 – internal server error
-          enum: [702, 703, 705, 708]
+          enum: [705, 708]
         errorId:
           type: string
           description: 8-character hex error ID for tracing

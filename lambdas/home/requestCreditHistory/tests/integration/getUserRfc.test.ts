@@ -1,6 +1,6 @@
-import { AuthError, NotFoundError } from '../../../../../shared/constants/errors'
+import { NotFoundError } from '../../../../../shared/constants/errors'
 import { getDb } from '../../../../../shared/db/client'
-import { verifyUserRfc } from '../../services/verifyUserRfc'
+import { getUserRfc } from '../../services/getUserRfc'
 import { TEST_EMPLOYEE, TEST_USER, TEST_COMPANY_ID } from './helpers/constants'
 
 beforeAll(async () => {
@@ -23,18 +23,12 @@ afterAll(async () => {
   await db.query('DELETE FROM employees WHERE id = $1', [TEST_EMPLOYEE.id])
 })
 
-describe('verifyUserRfc integration', () => {
-  it('happy path — resolves when rfc matches user employee', async () => {
-    await expect(verifyUserRfc(TEST_USER.id, TEST_EMPLOYEE.rfc)).resolves.toBeUndefined()
-  })
-
-  it('throws AuthError when rfc does not match user employee', async () => {
-    await expect(verifyUserRfc(TEST_USER.id, 'XXXX000000XXX')).rejects.toThrow(AuthError)
+describe('getUserRfc integration', () => {
+  it('happy path — returns rfc for user', async () => {
+    await expect(getUserRfc(TEST_USER.id)).resolves.toBe(TEST_EMPLOYEE.rfc)
   })
 
   it('throws NotFoundError when userId does not exist', async () => {
-    await expect(verifyUserRfc('00000000-0000-0000-0000-000000000000', TEST_EMPLOYEE.rfc)).rejects.toThrow(
-      NotFoundError
-    )
+    await expect(getUserRfc('00000000-0000-0000-0000-000000000000')).rejects.toThrow(NotFoundError)
   })
 })

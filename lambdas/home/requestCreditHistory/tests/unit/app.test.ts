@@ -1,18 +1,18 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
-import { verifyUserRfc } from '../../services/verifyUserRfc'
+import { getUserRfc } from '../../services/getUserRfc'
 import { getCachedAnalysis } from '../../services/getCachedAnalysis'
 import { storeAnalysis } from '../../services/storeAnalysis'
 import { invokeCreditHistory } from '../../services/invokeCreditHistory'
-import { AuthError, NotFoundError } from '../../../../../shared/constants/errors'
+import { NotFoundError } from '../../../../../shared/constants/errors'
 import type { AnalysisResponse } from '../../types/AnalysisResponse'
 
-jest.mock('../../services/verifyUserRfc')
+jest.mock('../../services/getUserRfc')
 jest.mock('../../services/getCachedAnalysis')
 jest.mock('../../services/storeAnalysis')
 jest.mock('../../services/invokeCreditHistory')
 
-const mockVerifyUserRfc = verifyUserRfc as jest.MockedFunction<typeof verifyUserRfc>
+const mockGetUserRfc = getUserRfc as jest.MockedFunction<typeof getUserRfc>
 const mockGetCachedAnalysis = getCachedAnalysis as jest.MockedFunction<typeof getCachedAnalysis>
 const mockStoreAnalysis = storeAnalysis as jest.MockedFunction<typeof storeAnalysis>
 const mockInvokeCreditHistory = invokeCreditHistory as jest.MockedFunction<typeof invokeCreditHistory>
@@ -63,8 +63,6 @@ const MOCK_CACHED_RESULT: AnalysisResponse = {
 }
 
 const baseEvent: Partial<APIGatewayProxyEventV2> = {
-  body: JSON.stringify({ rfc: 'GOAM860519H45' }),
-  headers: { 'Content-Type': 'application/json' },
   requestContext: {
     authorizer: {
       lambda: {
@@ -82,7 +80,7 @@ describe('requestCreditHistory', () => {
     process.env.DB_SECRET_ID = 'onBoardingCredentialsDev'
     process.env.CREDIT_HISTORY_REQUESTS_TABLE_NAME = 'onboardingCreditHistoryRequestsDBDev'
     process.env.GET_CREDIT_HISTORY_FUNCTION_NAME = 'onboardingGetCreditHistoryDev'
-    mockVerifyUserRfc.mockResolvedValue(undefined)
+    mockGetUserRfc.mockResolvedValue('GOAM860519H45')
     mockGetCachedAnalysis.mockResolvedValue(null)
     mockStoreAnalysis.mockResolvedValue(undefined)
     mockInvokeCreditHistory.mockResolvedValue(MOCK_CREDIT_HISTORY_ACTIVE)
@@ -131,39 +129,13 @@ describe('requestCreditHistory', () => {
     const parsed = JSON.parse(result.body as string)
     expect(parsed.type).toBe('active_credit')
     expect(parsed.analyzedAt).toBe('2026-06-01T10:00:00.000Z')
+    expect(mockGetUserRfc).toHaveBeenCalledTimes(1)
     expect(mockInvokeCreditHistory).not.toHaveBeenCalled()
     expect(mockStoreAnalysis).not.toHaveBeenCalled()
   })
 
-  it('should return 400 with errorCode 702 when rfc is missing', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({}) }
-    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 400 with errorCode 702 when rfc format is invalid', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({ rfc: 'invalid' }) }
-    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(702)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 400 with errorCode 703 when rfc does not match user employee', async () => {
-    mockVerifyUserRfc.mockRejectedValue(new AuthError('RFC does not match'))
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(703)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
   it('should return 400 with errorCode 705 when user employee record not found', async () => {
-    mockVerifyUserRfc.mockRejectedValue(new NotFoundError('Employee not found'))
+    mockGetUserRfc.mockRejectedValue(new NotFoundError('Employee not found'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -198,8 +170,8 @@ describe('requestCreditHistory', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 708 when verifyUserRfc throws a DB error', async () => {
-    mockVerifyUserRfc.mockRejectedValue(new Error('connection timeout'))
+  it('should return 400 with errorCode 708 when getUserRfc throws a DB error', async () => {
+    mockGetUserRfc.mockRejectedValue(new Error('Error on getUserRfc: connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
