@@ -92,6 +92,27 @@ components:
           items:
             $ref: '#/components/schemas/Payment'
 
+    ActiveCreditBalance:
+      type: object
+      properties:
+        creditId:
+          type: string
+          description: Portal credit identifier
+        balance:
+          type: number
+          description: Remaining balance of the credit
+        lastPayment:
+          type: string
+          nullable: true
+          description: Concept of the last recorded payment, e.g. "PAGO 3 de 12"
+        nextPaymentDate:
+          type: string
+          nullable: true
+          description: |
+            Calculated due date of the next installment (DD/MM/YYYY).
+            Derived from the highest-numbered installment's dueDate plus one period
+            (7 days for SEMANAL, 15 days for QUINCENAL). Null if no parseable payments.
+
     SuccessResponse:
       type: object
       properties:
@@ -107,9 +128,11 @@ components:
           nullable: true
           description: true if at least one credit with status ACTIVO exists
         balance:
-          type: number
+          type: array
           nullable: true
-          description: Balance of the first active credit, or 0 if none active
+          description: One entry per ACTIVO credit. Empty array if no active credits.
+          items:
+            $ref: '#/components/schemas/ActiveCreditBalance'
         company:
           type: string
           nullable: true
@@ -126,10 +149,10 @@ components:
             Max month gap between consecutive credits (ACTIVO or TERMINADO status),
             sorted by first payment date. 0 if fewer than 2 eligible credits.
         daysPastDue:
-          type: number
+          type: integer
           nullable: true
           description: |
-            Average days past due across all overdue payments.
+            Average days past due across all overdue payments, truncated to integer.
             Grace period: 7 days for SEMANAL, 15 days for all others.
             Also accounts for pending installments not yet paid.
             0 if no overdue payments found.

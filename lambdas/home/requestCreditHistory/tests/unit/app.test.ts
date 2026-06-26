@@ -19,7 +19,7 @@ const MOCK_CREDIT_HISTORY = {
   history: true as const,
   operator: false,
   activeCredit: true,
-  balance: 5000,
+  balance: [{ creditId: 'CRED-001', balance: 5000, lastPayment: 'PAGO 1 de 12', nextPaymentDate: '15/11/2023' }],
   company: 'Empresa Test SA',
   creditHistory: [],
   frequency: 12,
@@ -57,7 +57,7 @@ describe('requestCreditHistory', () => {
     expect(result.statusCode).toBe(200)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.history).toBe(true)
-    expect(parsed.balance).toBe(5000)
+    expect(parsed.balance).toEqual([{ creditId: 'CRED-001', balance: 5000, lastPayment: 'PAGO 1 de 12', nextPaymentDate: '15/11/2023' }])
     expect(parsed.company).toBe('Empresa Test SA')
   })
 
