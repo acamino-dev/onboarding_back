@@ -36,6 +36,7 @@ export type CreditHistoryResult =
       frequency: number
       daysPastDue: number
       antiguedad: number
+      acaminoTenure: number | null
     }
   | {
       history: false
@@ -47,4 +48,5 @@ export type CreditHistoryResult =
       frequency: null
       daysPastDue: null
       antiguedad: null
+      acaminoTenure: null
     }

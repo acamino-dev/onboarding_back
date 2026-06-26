@@ -2,6 +2,7 @@ import { getSecret } from '../../../../../shared/utils/secrets'
 import { loginToPortal, buildConsultaUrl } from '../../services/portalLogin'
 import { searchCreditsByRfc, type ParsedCreditRow } from '../../services/searchCreditsByRfc'
 import { fetchContractPayments, type ContractContext } from '../../services/fetchContractPayments'
+import { computeAcaminoTenure } from '../../functions/computeAcaminoTenure'
 import { computeCreditFrequency } from '../../functions/computeCreditFrequency'
 import { computeDaysPastDue } from '../../functions/computeDaysPastDue'
 import { computeNextPaymentDate } from '../../functions/computeNextPaymentDate'
@@ -63,6 +64,23 @@ describe('computeFunctions integration', () => {
 
     expect(typeof daysPastDue).toBe('number')
     expect(daysPastDue).toBeGreaterThanOrEqual(0)
+  })
+
+  it('computeAcaminoTenure returns number or null and logs result', () => {
+    const tenure = computeAcaminoTenure(rows)
+
+    console.log('\nRows used for acaminoTenure (ACTIVO/TERMINADO):')
+    console.table(
+      rows
+        .filter((r) => r.status === 'ACTIVO' || r.status === 'TERMINADO')
+        .map((r) => ({ creditId: r.creditId, status: r.status, fechaPrimerPago: r.fechaPrimerPago }))
+    )
+    console.log(`\nacaminoTenure → ${tenure} months`)
+
+    expect(tenure === null || typeof tenure === 'number').toBe(true)
+    if (tenure !== null) {
+      expect(tenure).toBeGreaterThanOrEqual(0)
+    }
   })
 
   it('activeBalances maps ACTIVO credits with last payment and next payment date', () => {

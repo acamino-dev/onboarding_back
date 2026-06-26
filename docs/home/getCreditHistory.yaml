@@ -160,6 +160,12 @@ components:
           type: number
           nullable: true
           description: Employee seniority as numeric value from portal (txtAntiguedad field)
+        acaminoTenure:
+          type: integer
+          nullable: true
+          description: |
+            Months elapsed from the oldest fechaPrimerPago across all ACTIVO or TERMINADO
+            credits to the current date. Null if no credits with those statuses exist.
 
     ErrorResponse:
       type: object

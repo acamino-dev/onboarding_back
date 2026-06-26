@@ -7,6 +7,7 @@ import { searchCreditsByRfc } from './services/searchCreditsByRfc'
 import { fetchContractPayments } from './services/fetchContractPayments'
 import { fetchEmployeeInfo } from './services/fetchEmployeeInfo'
 import { fetchEmploymentData } from './services/fetchEmploymentData'
+import { computeAcaminoTenure } from './functions/computeAcaminoTenure'
 import { computeCreditFrequency } from './functions/computeCreditFrequency'
 import { computeDaysPastDue } from './functions/computeDaysPastDue'
 import { computeNextPaymentDate } from './functions/computeNextPaymentDate'
@@ -23,6 +24,7 @@ const EMPTY_RESULT: CreditHistoryResult = {
   frequency: null,
   daysPastDue: null,
   antiguedad: null,
+  acaminoTenure: null,
 }
 
 export const lambdaHandler = async (
@@ -72,6 +74,8 @@ export const lambdaHandler = async (
         return { creditId: row.creditId, balance: row.balance, lastPayment, nextPaymentDate }
       })
 
+    const acaminoTenure = computeAcaminoTenure(rows)
+
     return createResponsePublic(200, {
       history: true,
       operator: employmentData.puesto.trim().toLowerCase() === 'operador',
@@ -82,6 +86,7 @@ export const lambdaHandler = async (
       frequency: computeCreditFrequency(rows),
       daysPastDue: computeDaysPastDue(creditHistory),
       antiguedad: employmentData.antiguedad,
+      acaminoTenure,
     })
   } catch (e) {
     return handleError(e)

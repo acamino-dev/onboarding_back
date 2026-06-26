@@ -16,6 +16,7 @@ describe('invokeCreditHistory integration', () => {
       frequency: r.frequency,
       daysPastDue: r.daysPastDue,
       antiguedad: r.antiguedad,
+      acaminoTenure: r.acaminoTenure,
       creditHistoryCount: Array.isArray(r.creditHistory) ? r.creditHistory.length : r.creditHistory,
     })))
 
@@ -44,6 +45,10 @@ describe('invokeCreditHistory integration', () => {
       expect(typeof result.frequency).toBe('number')
       expect(Number.isInteger(result.daysPastDue)).toBe(true)
       expect(typeof result.antiguedad).toBe('number')
+      expect(result.acaminoTenure === null || typeof result.acaminoTenure === 'number').toBe(true)
+      if (result.acaminoTenure !== null) {
+        expect(result.acaminoTenure).toBeGreaterThanOrEqual(0)
+      }
     } else {
       expect(result.operator).toBeNull()
       expect(result.activeCredit).toBeNull()
@@ -53,6 +58,7 @@ describe('invokeCreditHistory integration', () => {
       expect(result.frequency).toBeNull()
       expect(result.daysPastDue).toBeNull()
       expect(result.antiguedad).toBeNull()
+      expect(result.acaminoTenure).toBeNull()
     }
   })
 

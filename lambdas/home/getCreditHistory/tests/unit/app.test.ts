@@ -90,6 +90,7 @@ describe('getCreditHistory', () => {
     expect(parsed.company).toBe('EMPRESA TEST S.A. DE C.V.')
     expect(parsed.frequency).toBe(0)
     expect(parsed.antiguedad).toBe(24)
+    expect(typeof parsed.acaminoTenure).toBe('number')
     expect(parsed.creditHistory).toHaveLength(1)
     expect(parsed.creditHistory[0].creditId).toBe('CRED-001')
     expect(parsed.creditHistory[0].payments).toHaveLength(1)
@@ -112,6 +113,7 @@ describe('getCreditHistory', () => {
     expect(parsed.balance).toBeNull()
     expect(parsed.company).toBeNull()
     expect(parsed.frequency).toBeNull()
+    expect(parsed.acaminoTenure).toBeNull()
     expect(parsed.creditHistory).toBeNull()
   })
 

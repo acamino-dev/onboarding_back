@@ -25,6 +25,7 @@ const MOCK_CREDIT_HISTORY = {
   frequency: 12,
   daysPastDue: 0,
   antiguedad: 24,
+  acaminoTenure: 41,
 }
 
 const baseEvent: Partial<APIGatewayProxyEventV2> = {
@@ -59,6 +60,7 @@ describe('requestCreditHistory', () => {
     expect(parsed.history).toBe(true)
     expect(parsed.balance).toEqual([{ creditId: 'CRED-001', balance: 5000, lastPayment: 'PAGO 1 de 12', nextPaymentDate: '15/11/2023' }])
     expect(parsed.company).toBe('Empresa Test SA')
+    expect(parsed.acaminoTenure).toBe(41)
   })
 
   it('should return 400 with errorCode 702 when rfc is missing', async () => {
