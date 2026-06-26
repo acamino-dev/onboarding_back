@@ -1,21 +1,23 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda'
 import { lambdaHandler } from '../../app'
 import { verifyUserRfc } from '../../services/verifyUserRfc'
-import { checkAndUpdateCreditAccess } from '../../services/checkAndUpdateCreditAccess'
+import { getCachedAnalysis } from '../../services/getCachedAnalysis'
+import { storeAnalysis } from '../../services/storeAnalysis'
 import { invokeCreditHistory } from '../../services/invokeCreditHistory'
 import { AuthError, NotFoundError } from '../../../../../shared/constants/errors'
+import type { AnalysisResponse } from '../../types/AnalysisResponse'
 
 jest.mock('../../services/verifyUserRfc')
-jest.mock('../../services/checkAndUpdateCreditAccess')
+jest.mock('../../services/getCachedAnalysis')
+jest.mock('../../services/storeAnalysis')
 jest.mock('../../services/invokeCreditHistory')
 
 const mockVerifyUserRfc = verifyUserRfc as jest.MockedFunction<typeof verifyUserRfc>
-const mockCheckAndUpdateCreditAccess = checkAndUpdateCreditAccess as jest.MockedFunction<
-  typeof checkAndUpdateCreditAccess
->
+const mockGetCachedAnalysis = getCachedAnalysis as jest.MockedFunction<typeof getCachedAnalysis>
+const mockStoreAnalysis = storeAnalysis as jest.MockedFunction<typeof storeAnalysis>
 const mockInvokeCreditHistory = invokeCreditHistory as jest.MockedFunction<typeof invokeCreditHistory>
 
-const MOCK_CREDIT_HISTORY = {
+const MOCK_CREDIT_HISTORY_ACTIVE = {
   history: true as const,
   operator: false,
   activeCredit: true,
@@ -26,6 +28,38 @@ const MOCK_CREDIT_HISTORY = {
   daysPastDue: 0,
   antiguedad: 24,
   acaminoTenure: 41,
+}
+
+const MOCK_CREDIT_HISTORY_NO_ACTIVE = {
+  history: true as const,
+  operator: false,
+  activeCredit: false,
+  balance: [],
+  company: 'Empresa Test SA',
+  creditHistory: [],
+  frequency: 12,
+  daysPastDue: 0,
+  antiguedad: 24,
+  acaminoTenure: 41,
+}
+
+const MOCK_CREDIT_HISTORY_NO_HISTORY = {
+  history: false as const,
+  operator: null,
+  activeCredit: null,
+  balance: null,
+  company: null,
+  creditHistory: null,
+  frequency: null,
+  daysPastDue: null,
+  antiguedad: null,
+  acaminoTenure: null,
+}
+
+const MOCK_CACHED_RESULT: AnalysisResponse = {
+  type: 'active_credit',
+  balance: [{ creditId: 'CRED-001', balance: 5000, lastPayment: 'PAGO 1 de 12', nextPaymentDate: '15/11/2023' }],
+  analyzedAt: '2026-06-01T10:00:00.000Z',
 }
 
 const baseEvent: Partial<APIGatewayProxyEventV2> = {
@@ -49,18 +83,56 @@ describe('requestCreditHistory', () => {
     process.env.CREDIT_HISTORY_REQUESTS_TABLE_NAME = 'onboardingCreditHistoryRequestsDBDev'
     process.env.GET_CREDIT_HISTORY_FUNCTION_NAME = 'onboardingGetCreditHistoryDev'
     mockVerifyUserRfc.mockResolvedValue(undefined)
-    mockCheckAndUpdateCreditAccess.mockResolvedValue({ allowed: true })
-    mockInvokeCreditHistory.mockResolvedValue(MOCK_CREDIT_HISTORY)
+    mockGetCachedAnalysis.mockResolvedValue(null)
+    mockStoreAnalysis.mockResolvedValue(undefined)
+    mockInvokeCreditHistory.mockResolvedValue(MOCK_CREDIT_HISTORY_ACTIVE)
   })
 
-  it('should return 200 with credit history when all checks pass', async () => {
+  it('should return 200 with active_credit result when user has active credit', async () => {
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(200)
     const parsed = JSON.parse(result.body as string)
-    expect(parsed.history).toBe(true)
+    expect(parsed.type).toBe('active_credit')
     expect(parsed.balance).toEqual([{ creditId: 'CRED-001', balance: 5000, lastPayment: 'PAGO 1 de 12', nextPaymentDate: '15/11/2023' }])
-    expect(parsed.company).toBe('Empresa Test SA')
-    expect(parsed.acaminoTenure).toBe(41)
+    expect(typeof parsed.analyzedAt).toBe('string')
+    expect(parsed.creditOffer).toBeUndefined()
+    expect(mockStoreAnalysis).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return 200 with offer result (3000/150/3) when RFC has no portal history', async () => {
+    mockInvokeCreditHistory.mockResolvedValue(MOCK_CREDIT_HISTORY_NO_HISTORY)
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.type).toBe('offer')
+    expect(parsed.creditOffer.score).toBe(0)
+    expect(parsed.creditOffer.offer).toEqual({ amount: 3000, tasa: 150, plazo: 3 })
+    expect(parsed.balance).toBeUndefined()
+    expect(mockStoreAnalysis).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return 200 with offer result when user has no active credit', async () => {
+    mockInvokeCreditHistory.mockResolvedValue(MOCK_CREDIT_HISTORY_NO_ACTIVE)
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.type).toBe('offer')
+    expect(parsed.creditOffer).toBeDefined()
+    expect(parsed.creditOffer.score).toBeDefined()
+    expect(parsed.creditOffer.offer.amount).toBeDefined()
+    expect(parsed.balance).toBeUndefined()
+    expect(mockStoreAnalysis).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return 200 with cached result without calling getCreditHistory', async () => {
+    mockGetCachedAnalysis.mockResolvedValue(MOCK_CACHED_RESULT)
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(200)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.type).toBe('active_credit')
+    expect(parsed.analyzedAt).toBe('2026-06-01T10:00:00.000Z')
+    expect(mockInvokeCreditHistory).not.toHaveBeenCalled()
+    expect(mockStoreAnalysis).not.toHaveBeenCalled()
   })
 
   it('should return 400 with errorCode 702 when rfc is missing', async () => {
@@ -99,17 +171,6 @@ describe('requestCreditHistory', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 707 and nextAvailableAt when within 30-day cooldown', async () => {
-    const nextAvailableAt = '2026-07-25T10:00:00.000Z'
-    mockCheckAndUpdateCreditAccess.mockResolvedValue({ allowed: false, nextAvailableAt })
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(707)
-    expect(parsed.nextAvailableAt).toBe(nextAvailableAt)
-    expect(parsed.errorId).toBeUndefined()
-  })
-
   it('should return 400 with errorCode 708 when DB_SECRET_ID is not set', async () => {
     delete process.env.DB_SECRET_ID
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
@@ -146,8 +207,8 @@ describe('requestCreditHistory', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 708 when checkAndUpdateCreditAccess throws a DB error', async () => {
-    mockCheckAndUpdateCreditAccess.mockRejectedValue(new Error('connection timeout'))
+  it('should return 400 with errorCode 708 when getCachedAnalysis throws a DB error', async () => {
+    mockGetCachedAnalysis.mockRejectedValue(new Error('Error on getCachedAnalysis: connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -157,6 +218,15 @@ describe('requestCreditHistory', () => {
 
   it('should return 400 with errorCode 708 when invokeCreditHistory throws an error', async () => {
     mockInvokeCreditHistory.mockRejectedValue(new Error('Lambda invocation failed'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 708 when storeAnalysis throws a DB error', async () => {
+    mockStoreAnalysis.mockRejectedValue(new Error('Error on storeAnalysis: connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

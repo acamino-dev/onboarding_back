@@ -22,3 +22,9 @@ export const TEST_USER_OTHER_RFC = {
   email: 'other.credit@test.com',
   rfc: 'AAAA860519AAA',
 } as const
+
+export const TEST_DYNAMO_GET_CACHED_ID = 'f1a2b3c4-d5e6-7890-abcd-ef1234567891'
+export const TEST_DYNAMO_STORE_ID = 'f1a2b3c4-d5e6-7890-abcd-ef1234567892'
+
+// RFC with valid format but no records in the portal — always returns history: false
+export const TEST_RFC_NO_HISTORY = 'XXXX000000XXX'

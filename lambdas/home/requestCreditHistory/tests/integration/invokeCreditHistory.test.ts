@@ -1,5 +1,5 @@
 import { invokeCreditHistory } from '../../services/invokeCreditHistory'
-import { TEST_EMPLOYEE } from './helpers/constants'
+import { TEST_EMPLOYEE, TEST_RFC_NO_HISTORY } from './helpers/constants'
 
 const FUNCTION_NAME = process.env.GET_CREDIT_HISTORY_FUNCTION_NAME!
 
@@ -60,6 +60,34 @@ describe('invokeCreditHistory integration', () => {
       expect(result.antiguedad).toBeNull()
       expect(result.acaminoTenure).toBeNull()
     }
+  })
+
+  it('returns history: false with all null fields for RFC with no portal records', async () => {
+    const result = await invokeCreditHistory(TEST_RFC_NO_HISTORY, FUNCTION_NAME)
+
+    console.table([result].map(r => ({
+      history: r.history,
+      operator: r.operator,
+      activeCredit: r.activeCredit,
+      balanceCount: Array.isArray(r.balance) ? r.balance.length : r.balance,
+      company: r.company,
+      frequency: r.frequency,
+      daysPastDue: r.daysPastDue,
+      antiguedad: r.antiguedad,
+      acaminoTenure: r.acaminoTenure,
+      creditHistoryCount: Array.isArray(r.creditHistory) ? r.creditHistory.length : r.creditHistory,
+    })))
+
+    expect(result.history).toBe(false)
+    expect(result.operator).toBeNull()
+    expect(result.activeCredit).toBeNull()
+    expect(result.balance).toBeNull()
+    expect(result.company).toBeNull()
+    expect(result.creditHistory).toBeNull()
+    expect(result.frequency).toBeNull()
+    expect(result.daysPastDue).toBeNull()
+    expect(result.antiguedad).toBeNull()
+    expect(result.acaminoTenure).toBeNull()
   })
 
   it('throws wrapped Error when function name is invalid', async () => {

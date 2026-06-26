@@ -1,12 +1,20 @@
 openapi: 3.0.3
 info:
   title: requestCreditHistory
-  version: 1.0.0
+  version: 2.0.0
+
+security:
+  - bearerAuth: []
 
 paths:
   /home/credit:
     post:
-      summary: Verify RFC against JWT credentials, enforce 30-day cooldown, and return credit history
+      security:
+        - bearerAuth: []
+      summary: >
+        Verify RFC against JWT credentials and return a credit analysis.
+        Results are cached in DynamoDB for 30 days — subsequent calls within
+        that window return the cached result without re-invoking the portal.
       requestBody:
         required: true
         content:
@@ -15,7 +23,10 @@ paths:
               $ref: '#/components/schemas/RequestBody'
       responses:
         "200":
-          description: Credit history retrieved successfully
+          description: >
+            Credit analysis returned. Discriminate on `type` to determine
+            which case was returned. `analyzedAt` is the ISO timestamp of
+            when the original analysis was performed (fresh or cached).
           content:
             application/json:
               schema:
@@ -26,6 +37,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Missing or invalid JWT — rejected by the Lambda authorizer before reaching this function
 
 components:
   schemas:
@@ -42,64 +55,174 @@ components:
 
     SuccessResponse:
       oneOf:
-        - type: object
-          description: Employee has credit history
-          required:
-            - history
-            - operator
-            - activeCredit
-            - balance
-            - company
-            - creditHistory
-            - frequency
-            - daysPastDue
-            - antiguedad
-          properties:
-            history:
-              type: boolean
-              enum: [true]
-            operator:
-              type: boolean
-            activeCredit:
-              type: boolean
-            balance:
-              type: number
-            company:
-              type: string
-            creditHistory:
-              type: array
-              items:
-                type: object
-            frequency:
-              type: number
-            daysPastDue:
-              type: number
-            antiguedad:
-              type: number
-        - type: object
-          description: Employee has no credit history
-          required:
-            - history
-          properties:
-            history:
-              type: boolean
-              enum: [false]
-            operator:
-              nullable: true
-            activeCredit:
-              nullable: true
-            balance:
-              nullable: true
-            company:
-              nullable: true
-            creditHistory:
-              nullable: true
-            frequency:
-              nullable: true
-            daysPastDue:
-              nullable: true
-            antiguedad:
-              nullable: true
+        - $ref: '#/components/schemas/ActiveCreditResponse'
+        - $ref: '#/components/schemas/OfferResponse'
+      discriminator:
+        propertyName: type
+        mapping:
+          active_credit: '#/components/schemas/ActiveCreditResponse'
+          offer: '#/components/schemas/OfferResponse'
+
+    ActiveCreditResponse:
+      type: object
+      description: >
+        Employee has an active credit. No new credit offer is computed.
+        Front end should show current balance details.
+      required:
+        - type
+        - balance
+        - analyzedAt
+      properties:
+        type:
+          type: string
+          enum: [active_credit]
+        balance:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActiveCreditBalance'
+        analyzedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the analysis was performed
+
+    OfferResponse:
+      type: object
+      description: >
+        Employee has no active credit. A credit offer was computed by the
+        credit engine based on their history and profile. Also returned when
+        the employee has no portal history at all (score 0, offer 3000/150/3).
+      required:
+        - type
+        - creditOffer
+        - analyzedAt
+      properties:
+        type:
+          type: string
+          enum: [offer]
+        creditOffer:
+          $ref: '#/components/schemas/CreditEngineResult'
+        analyzedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the analysis was performed
+
+    ActiveCreditBalance:
+      type: object
+      required:
+        - creditId
+        - balance
+        - lastPayment
+        - nextPaymentDate
+      properties:
+        creditId:
+          type: string
+          example: CR-2024-00123
+        balance:
+          type: number
+          description: Current outstanding balance
+          example: 5000
+        lastPayment:
+          type: string
+          nullable: true
+          description: Concept label of the last payment recorded, or null
+          example: PAGO 1 de 12
+        nextPaymentDate:
+          type: string
+          nullable: true
+          description: Next payment due date in DD/MM/YYYY format, or null
+          example: 15/11/2024
+
+    CreditEngineResult:
+      type: object
+      required:
+        - score
+        - breakdown
+        - offer
+      properties:
+        score:
+          type: integer
+          description: Total score (0–30). Actual max achievable is 25 (5 factors × 5 pts).
+          minimum: 0
+          maximum: 30
+          example: 15
+        breakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        offer:
+          $ref: '#/components/schemas/CreditOffer'
+
+    ScoreBreakdown:
+      type: object
+      description: Points awarded per scoring dimension
+      required:
+        - creditCount
+        - acaminoTenure
+        - frequency
+        - company
+        - laborSeniority
+      properties:
+        creditCount:
+          type: integer
+          description: Points for number of liquidated credits (0–5)
+          minimum: 0
+          maximum: 5
+        acaminoTenure:
+          type: integer
+          description: Points for months with Acamino (0–5; scale differs for operador vs admin)
+          minimum: 0
+          maximum: 5
+        frequency:
+          type: integer
+          description: Points for months between credits — lower gap = higher score (0–5)
+          minimum: 0
+          maximum: 5
+        company:
+          type: integer
+          description: Points for employing company (1–5; all unlisted companies score 1)
+          minimum: 0
+          maximum: 5
+        laborSeniority:
+          type: integer
+          description: Points for months of labor seniority (0–5; scale differs for operador vs admin)
+          minimum: 0
+          maximum: 5
+
+    CreditOffer:
+      type: object
+      required:
+        - amount
+        - tasa
+        - plazo
+      properties:
+        amount:
+          type: integer
+          description: >
+            Maximum credit amount in MXN, capped at 35,000.
+            Computed as highest historical credit × multiplier per score bracket.
+            Fixed at 3,000 for scores 0–4 or no history.
+          example: 12000
+        tasa:
+          type: integer
+          description: Annual interest rate (120–150)
+          minimum: 120
+          maximum: 150
+          example: 133
+        plazo:
+          type: integer
+          description: Term in months (3–12)
+          minimum: 3
+          maximum: 12
+          example: 9
+
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+        description: >
+          JWT issued by the auth module. Validated by a Lambda authorizer
+          attached to the HTTP API Gateway route. The authorizer injects
+          `userId` into the request context — this lambda uses it to verify
+          that the RFC in the body belongs to the authenticated user.
 
     ErrorResponse:
       type: object
@@ -114,14 +237,9 @@ components:
             702 – validation error (invalid or missing rfc)
             703 – auth error (rfc does not match JWT user)
             705 – not found (employee record not found)
-            707 – rate limit (accessed within last 30 days)
             708 – internal server error
-          enum: [702, 703, 705, 707, 708]
+          enum: [702, 703, 705, 708]
         errorId:
           type: string
           description: 8-character hex error ID for tracing
           pattern: '^[0-9a-f]{8}$'
-        nextAvailableAt:
-          type: string
-          format: date-time
-          description: ISO 8601 timestamp of next allowed access — only present when errorCode is 707. errorId is absent in this case.

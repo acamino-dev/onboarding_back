@@ -4,8 +4,11 @@ import { handleError } from '../../../shared/utils/handleError'
 import { AuthError } from '../../../shared/constants/errors'
 import { validateBody } from './utils/validators'
 import { verifyUserRfc } from './services/verifyUserRfc'
-import { checkAndUpdateCreditAccess } from './services/checkAndUpdateCreditAccess'
+import { getCachedAnalysis } from './services/getCachedAnalysis'
+import { storeAnalysis } from './services/storeAnalysis'
 import { invokeCreditHistory } from './services/invokeCreditHistory'
+import { creditEngine } from './creditEngine/creditEngine'
+import type { AnalysisResponse } from './types/AnalysisResponse'
 
 export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
@@ -31,21 +34,20 @@ export const lambdaHandler = async (
 
     await verifyUserRfc(authContext.userId, body.rfc)
 
-    const accessResult = await checkAndUpdateCreditAccess(
-      authContext.userId,
-      CREDIT_HISTORY_REQUESTS_TABLE_NAME
-    )
-
-    if (!accessResult.allowed) {
-      return createResponsePublic(400, {
-        errorCode: 707,
-        nextAvailableAt: accessResult.nextAvailableAt,
-      })
-    }
+    const cached = await getCachedAnalysis(authContext.userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
+    if (cached) return createResponsePublic(200, cached)
 
     const creditHistory = await invokeCreditHistory(body.rfc, GET_CREDIT_HISTORY_FUNCTION_NAME)
 
-    return createResponsePublic(200, creditHistory)
+    const analyzedAt = new Date().toISOString()
+    const result: AnalysisResponse =
+      creditHistory.history && creditHistory.activeCredit
+        ? { type: 'active_credit', balance: creditHistory.balance, analyzedAt }
+        : { type: 'offer', creditOffer: creditEngine(creditHistory), analyzedAt }
+
+    await storeAnalysis(authContext.userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME, result)
+
+    return createResponsePublic(200, result)
   } catch (e) {
     return handleError(e)
   }
