@@ -5,6 +5,7 @@ import { createResponsePublic } from '../../../shared/utils/createResponse'
 import { handleError } from '../../../shared/utils/handleError'
 import { generateUploadUrl } from './services/generateUploadUrl'
 import { getKycByUserId } from './services/getKycByUserId'
+import { saveS3Key } from './services/saveS3Key'
 import { validateBody } from './utils/validators'
 
 const UPLOADABLE_STEPS = new Set(['INE_FRONT', 'INE_BACK', 'ADDRESS', 'CURP', 'BANK'])
@@ -52,6 +53,8 @@ export const lambdaHandler = async (
     const s3Key = `onboarding/${year}/${month}/${day}/${kycRecord.creditId}/${currentStep}.${ext}`
 
     const uploadUrl = await generateUploadUrl(S3_BUCKET_NAME, s3Key, body.contentType)
+
+    await saveS3Key(kycRecord.creditId, s3Key, KYC_TABLE_NAME)
 
     return createResponsePublic(200, {
       uploadUrl,

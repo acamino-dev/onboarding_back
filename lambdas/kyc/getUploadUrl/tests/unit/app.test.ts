@@ -3,12 +3,15 @@ import { NotFoundError } from '../../../../../shared/constants/errors'
 import { lambdaHandler } from '../../app'
 import { getKycByUserId } from '../../services/getKycByUserId'
 import { generateUploadUrl } from '../../services/generateUploadUrl'
+import { saveS3Key } from '../../services/saveS3Key'
 
 jest.mock('../../services/getKycByUserId')
 jest.mock('../../services/generateUploadUrl')
+jest.mock('../../services/saveS3Key')
 
 const mockGetKycByUserId = getKycByUserId as jest.MockedFunction<typeof getKycByUserId>
 const mockGenerateUploadUrl = generateUploadUrl as jest.MockedFunction<typeof generateUploadUrl>
+const mockSaveS3Key = saveS3Key as jest.MockedFunction<typeof saveS3Key>
 
 const TEST_USER_ID = 'user-test-abc-001'
 
@@ -46,6 +49,7 @@ describe('getUploadUrl', () => {
     delete process.env.DEV_USER_ID
     mockGetKycByUserId.mockResolvedValue(kycRecord)
     mockGenerateUploadUrl.mockResolvedValue(MOCK_UPLOAD_URL)
+    mockSaveS3Key.mockResolvedValue(undefined)
   })
 
   it('should return 200 with uploadUrl, s3Key, step and creditId on happy path', async () => {
@@ -166,6 +170,15 @@ describe('getUploadUrl', () => {
 
   it('should return 400 with errorCode 708 when generateUploadUrl throws', async () => {
     mockGenerateUploadUrl.mockRejectedValue(new Error('Error on generateUploadUrl: S3 error'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(708)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 708 when saveS3Key throws a DB error', async () => {
+    mockSaveS3Key.mockRejectedValue(new Error('Error on saveS3Key: connection timeout'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

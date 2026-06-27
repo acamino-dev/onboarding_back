@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: validateIneFront
+  version: 1.0.0
+
+paths:
+  /kyc/validate-ine-front:
+    post:
+      summary: Analyze INE front document with Textract and advance KYC step to INE_FRONT
+      responses:
+        "200":
+          description: Success — document validated, KYC step advanced to INE_FRONT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+          example: 701
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (document not uploaded, fields missing/invalid)
+            703 – auth error (missing userId)
+            704 – forbidden (KYC step is not CONDITIONS)
+            705 – not found (no active KYC process for user)
+            708 – internal server error (Textract, S3, or DynamoDB failure)
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
