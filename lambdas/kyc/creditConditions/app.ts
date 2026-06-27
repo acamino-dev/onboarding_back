@@ -4,6 +4,7 @@ import { handleError } from '../../../shared/utils/handleError'
 import { AuthError, ForbiddenError } from '../../../shared/constants/errors'
 import { validateBody } from './utils/validators'
 import { getCreditOffer } from './services/getCreditOffer'
+import { checkNoActiveKycProcess } from './services/checkNoActiveKycProcess'
 import { createKycProcess } from './services/createKycProcess'
 
 export const lambdaHandler = async (
@@ -27,6 +28,8 @@ export const lambdaHandler = async (
     const { amount, term } = validateBody(event.body ?? '')
 
     const creditOffer = await getCreditOffer(userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
+
+    await checkNoActiveKycProcess(userId, KYC_TABLE_NAME)
 
     if (amount > creditOffer.amount) {
       throw new ForbiddenError('Requested amount exceeds approved credit limit', {

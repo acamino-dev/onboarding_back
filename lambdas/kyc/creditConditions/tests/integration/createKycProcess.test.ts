@@ -19,7 +19,7 @@ describe('createKycProcess integration', () => {
     const result = await createKycProcess(TEST_KYC_USER_ID, 5000, 12, 0.05, KYC_TABLE)
     createdCreditId = result.creditId
 
-    expect(result.step).toBe('CONDITIONS')
+    expect(result.step).toBe('INE_FRONT')
     expect(result.creditId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
     )
@@ -38,7 +38,7 @@ describe('createKycProcess integration', () => {
     expect(Item?.amount).toBe(8000)
     expect(Item?.term).toBe(18)
     expect(Item?.rate).toBe(0.08)
-    expect(Item?.step).toBe('CONDITIONS')
+    expect(Item?.step).toBe('INE_FRONT')
     expect(Item?.created_at).toBeGreaterThan(0)
   })
 

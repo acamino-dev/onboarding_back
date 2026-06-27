@@ -4,6 +4,7 @@ export const KYC_TABLE = 'onboardingKycDBDev'
 export const TEST_OFFER_USER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567810'
 export const TEST_ACTIVE_CREDIT_USER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567811'
 export const TEST_KYC_USER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567812'
+export const TEST_EXISTING_KYC_USER_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567813'
 
 export const TEST_CREDIT_OFFER = {
   score: 80,

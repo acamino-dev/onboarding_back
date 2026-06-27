@@ -72,7 +72,8 @@ components:
             704 – forbidden (active credit exists, or amount/term exceeds approved offer)
             705 – not found (no credit analysis found for user)
             708 – internal server error
-          enum: [702, 703, 704, 705, 708]
+            709 – conflict (user already has an active KYC process in progress)
+          enum: [702, 703, 704, 705, 708, 709]
         errorId:
           type: string
           description: 8-character hex error ID for tracing
