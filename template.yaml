@@ -775,6 +775,50 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  GetUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingGetUploadUrl${Environment}
+      CodeUri: ./
+      Handler: lambdas/kyc/getUploadUrl/app.lambdaHandler
+      Description: POST /kyc/upload-url - generates presigned S3 PUT URL for the current KYC document step
+      Environment:
+        Variables:
+          KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
+          S3_BUCKET_NAME: !Sub acamino-file-system-${Environment}
+          DEV_USER_ID: !Ref DevUserId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt KycTable.Arn
+                - !Sub '${KycTable.Arn}/index/userId-index'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub 'arn:aws:s3:::acamino-file-system-${Environment}/onboarding/*'
+        - VPCAccessPolicy: {}
+      Events:
+        GetUploadUrl:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /kyc/upload-url
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/kyc/getUploadUrl/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL

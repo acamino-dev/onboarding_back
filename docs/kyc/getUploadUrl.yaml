@@ -1,0 +1,85 @@
+openapi: 3.0.3
+info:
+  title: getUploadUrl
+  version: 1.0.0
+
+paths:
+  /kyc/upload-url:
+    post:
+      summary: Generates a presigned S3 PUT URL for the current KYC document step
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check `errorCode` for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - contentType
+      properties:
+        contentType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - application/pdf
+
+    SuccessResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+          description: Presigned S3 PUT URL valid for 1 hour
+        s3Key:
+          type: string
+          description: S3 object key (e.g. onboarding/2026/06/27/{creditId}/INE_FRONT.jpg)
+        step:
+          type: string
+          description: Current KYC step that maps to this document
+          enum:
+            - INE_FRONT
+            - INE_BACK
+            - ADDRESS
+            - CURP
+            - BANK
+        creditId:
+          type: string
+          description: UUID of the active KYC credit process
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (invalid or missing contentType)
+            703 – unauthorized (missing auth context)
+            704 – forbidden (current step does not require a document upload)
+            705 – not found (no active KYC process for this user)
+            708 – internal server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
