@@ -47,6 +47,13 @@ Parameters:
     Description: email de pruebas para dev — bypass del authorizer context en SAM local
     Default: ""
 
+Mappings:
+  EnvLower:
+    Dev:
+      Value: dev
+    Prod:
+      Value: prod
+
 Resources:
   CompaniesTable:
     Type: AWS::DynamoDB::Table
@@ -785,7 +792,9 @@ Resources:
       Environment:
         Variables:
           KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
-          S3_BUCKET_NAME: !Sub acamino-file-system-${Environment}
+          S3_BUCKET_NAME: !Sub
+            - acamino-file-system-${EnvLow}
+            - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
           DEV_USER_ID: !Ref DevUserId
       Policies:
         - Statement:
@@ -805,7 +814,9 @@ Resources:
             - Effect: Allow
               Action:
                 - s3:PutObject
-              Resource: !Sub 'arn:aws:s3:::acamino-file-system-${Environment}/onboarding/*'
+              Resource: !Sub
+                - 'arn:aws:s3:::acamino-file-system-${EnvLow}/onboarding/*'
+                - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
         - VPCAccessPolicy: {}
       Events:
         GetUploadUrl:
@@ -835,7 +846,9 @@ Resources:
       Environment:
         Variables:
           KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
-          S3_BUCKET_NAME: !Sub acamino-file-system-${Environment}
+          S3_BUCKET_NAME: !Sub
+            - acamino-file-system-${EnvLow}
+            - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
           DEV_USER_ID: !Ref DevUserId
       Policies:
         - Statement:
@@ -855,7 +868,9 @@ Resources:
             - Effect: Allow
               Action:
                 - s3:GetObject
-              Resource: !Sub 'arn:aws:s3:::acamino-file-system-${Environment}/onboarding/*'
+              Resource: !Sub
+                - 'arn:aws:s3:::acamino-file-system-${EnvLow}/onboarding/*'
+                - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
         - Statement:
             - Effect: Allow
               Action:
