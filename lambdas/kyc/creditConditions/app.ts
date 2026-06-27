@@ -46,7 +46,7 @@ export const lambdaHandler = async (
       })
     }
 
-    const kycProcess = await createKycProcess(userId, amount, term, KYC_TABLE_NAME)
+    const kycProcess = await createKycProcess(userId, amount, term, creditOffer.rate, KYC_TABLE_NAME)
 
     return createResponsePublic(200, kycProcess)
   } catch (e) {

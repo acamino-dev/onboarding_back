@@ -13,6 +13,7 @@ export const createKycProcess = async (
   userId: string,
   amount: number,
   term: number,
+  rate: number,
   tableName: string
 ): Promise<KycProcess> => {
   const creditId = randomUUID()
@@ -27,6 +28,7 @@ export const createKycProcess = async (
         step: KYC_STEPS.CONDITIONS,
         amount,
         term,
+        rate,
         expires_at: now + TTL_SECONDS,
         created_at: now,
       },

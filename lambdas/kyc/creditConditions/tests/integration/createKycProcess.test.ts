@@ -16,7 +16,7 @@ afterEach(async () => {
 
 describe('createKycProcess integration', () => {
   it('creates KYC process and returns creditId and step CONDITIONS', async () => {
-    const result = await createKycProcess(TEST_KYC_USER_ID, 5000, 12, KYC_TABLE)
+    const result = await createKycProcess(TEST_KYC_USER_ID, 5000, 12, 0.05, KYC_TABLE)
     createdCreditId = result.creditId
 
     expect(result.step).toBe('CONDITIONS')
@@ -26,7 +26,7 @@ describe('createKycProcess integration', () => {
   })
 
   it('persists correct fields in DynamoDB', async () => {
-    const result = await createKycProcess(TEST_KYC_USER_ID, 8000, 18, KYC_TABLE)
+    const result = await createKycProcess(TEST_KYC_USER_ID, 8000, 18, 0.08, KYC_TABLE)
     createdCreditId = result.creditId
 
     const { Item } = await dynamoDb.get({
@@ -37,13 +37,14 @@ describe('createKycProcess integration', () => {
     expect(Item?.userId).toBe(TEST_KYC_USER_ID)
     expect(Item?.amount).toBe(8000)
     expect(Item?.term).toBe(18)
+    expect(Item?.rate).toBe(0.08)
     expect(Item?.step).toBe('CONDITIONS')
     expect(Item?.created_at).toBeGreaterThan(0)
   })
 
   it('sets TTL approximately 15 days from creation', async () => {
     const before = Math.floor(Date.now() / 1000)
-    const result = await createKycProcess(TEST_KYC_USER_ID, 3000, 6, KYC_TABLE)
+    const result = await createKycProcess(TEST_KYC_USER_ID, 3000, 6, 0.05, KYC_TABLE)
     createdCreditId = result.creditId
     const after = Math.floor(Date.now() / 1000)
 
