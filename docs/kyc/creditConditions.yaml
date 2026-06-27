@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: creditConditions
+  version: 1.0.0
+
+paths:
+  /kyc/credit/conditions:
+    post:
+      summary: Validates requested monto and plazo against the user's approved credit offer and initializes the KYC process
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: Credit conditions accepted — KYC process initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - monto
+        - plazo
+      properties:
+        monto:
+          type: number
+          description: Requested credit amount in MXN. Must be positive and at most 35000.
+          example: 5000
+        plazo:
+          type: integer
+          description: Requested term in months. Minimum 3.
+          example: 12
+
+    SuccessResponse:
+      type: object
+      properties:
+        creditId:
+          type: string
+          description: UUID identifying the new KYC process
+          example: "b2c3d4e5-f6a7-8901-bcde-fa2345678900"
+        step:
+          type: string
+          description: Current KYC step
+          enum: ["CONDITIONS"]
+          example: "CONDITIONS"
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (missing/invalid body fields, monto ≤ 0, plazo < 3, monto > 35000)
+            703 – unauthorized (missing auth context)
+            704 – forbidden (active credit exists, or monto/plazo exceeds approved offer)
+            705 – not found (no credit analysis found for user)
+            708 – internal server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
+          example: "a3f2b1c0"

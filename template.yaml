@@ -108,6 +108,30 @@ Resources:
         - AttributeName: userId
           KeyType: HASH
 
+  KycTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub onboardingKycDB${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: creditId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: creditId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+
   OnboardingApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -668,6 +692,48 @@ Resources:
         Sourcemap: true
         EntryPoints:
           - lambdas/home/getUserInfo/app.ts
+        External:
+          - "@aws-sdk/*"
+
+  CreditConditionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingCreditConditions${Environment}
+      CodeUri: ./
+      Handler: lambdas/kyc/creditConditions/app.lambdaHandler
+      Description: POST /kyc/credit/conditions - validates monto and plazo against credit offer and initializes KYC process
+      Environment:
+        Variables:
+          CREDIT_HISTORY_REQUESTS_TABLE_NAME: !Sub onboardingCreditHistoryRequestsDB${Environment}
+          KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
+          DEV_USER_ID: !Ref DevUserId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt CreditHistoryRequestsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt KycTable.Arn
+        - VPCAccessPolicy: {}
+      Events:
+        CreditConditions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /kyc/credit/conditions
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/kyc/creditConditions/app.ts
         External:
           - "@aws-sdk/*"
 
