@@ -29,7 +29,7 @@ const noAuthEvent: Partial<APIGatewayProxyEventV2> = {
 const kycRecord = {
   creditId: 'credit-test-uuid-001',
   userId: TEST_USER_ID,
-  step: 'INE_FRONT',
+  step: 'INE_BACK',
   amount: 10000,
   term: 12,
   created_at: 1750000000,
@@ -110,8 +110,8 @@ describe('getUploadUrl', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when step is REVIEW', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'REVIEW' })
+  it('should return 400 with errorCode 704 when step is BIOMETRIC', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'BIOMETRIC' })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -119,8 +119,8 @@ describe('getUploadUrl', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when step is BIOMETRIC', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'BIOMETRIC' })
+  it('should return 400 with errorCode 704 when current step is CONDITIONS', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'INE_FRONT' })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
