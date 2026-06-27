@@ -16,7 +16,7 @@ export const TEST_CREDIT_OFFER = {
   },
   offer: {
     amount: 10000,
-    tasa: 0.05,
-    plazo: 24,
+    rate: 0.05,
+    term: 24,
   },
 } as const

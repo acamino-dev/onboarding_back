@@ -11,7 +11,7 @@ const mockGetCreditOffer = getCreditOffer as jest.MockedFunction<typeof getCredi
 const mockCreateKycProcess = createKycProcess as jest.MockedFunction<typeof createKycProcess>
 
 const baseEvent: Partial<APIGatewayProxyEventV2> = {
-  body: JSON.stringify({ monto: 5000, plazo: 12 }),
+  body: JSON.stringify({ amount: 5000, term: 12 }),
   headers: { 'Content-Type': 'application/json' },
   requestContext: {
     authorizer: {
@@ -27,7 +27,7 @@ describe('creditConditions', () => {
     process.env.KYC_TABLE_NAME = 'onboardingKycDBDev'
     delete process.env.DEV_USER_ID
 
-    mockGetCreditOffer.mockResolvedValue({ amount: 10000, tasa: 0.05, plazo: 24 })
+    mockGetCreditOffer.mockResolvedValue({ amount: 10000, rate: 0.05, term: 24 })
     mockCreateKycProcess.mockResolvedValue({ creditId: 'test-credit-uuid', step: 'CONDITIONS' })
   })
 
@@ -47,10 +47,10 @@ describe('creditConditions', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when monto is 0', async () => {
+  it('should return 400 with errorCode 702 when amount is 0', async () => {
     const result = await lambdaHandler({
       ...baseEvent,
-      body: JSON.stringify({ monto: 0, plazo: 12 }),
+      body: JSON.stringify({ amount: 0, term: 12 }),
     } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -58,10 +58,10 @@ describe('creditConditions', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when monto is negative', async () => {
+  it('should return 400 with errorCode 702 when amount is negative', async () => {
     const result = await lambdaHandler({
       ...baseEvent,
-      body: JSON.stringify({ monto: -100, plazo: 12 }),
+      body: JSON.stringify({ amount: -100, term: 12 }),
     } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -69,10 +69,10 @@ describe('creditConditions', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when plazo is below minimum (< 3)', async () => {
+  it('should return 400 with errorCode 702 when term is below minimum (< 3)', async () => {
     const result = await lambdaHandler({
       ...baseEvent,
-      body: JSON.stringify({ monto: 5000, plazo: 2 }),
+      body: JSON.stringify({ amount: 5000, term: 2 }),
     } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -80,10 +80,10 @@ describe('creditConditions', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when monto exceeds absolute maximum (> 35000)', async () => {
+  it('should return 400 with errorCode 702 when amount exceeds absolute maximum (> 35000)', async () => {
     const result = await lambdaHandler({
       ...baseEvent,
-      body: JSON.stringify({ monto: 35001, plazo: 12 }),
+      body: JSON.stringify({ amount: 35001, term: 12 }),
     } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -121,10 +121,10 @@ describe('creditConditions', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when monto exceeds approved credit limit', async () => {
+  it('should return 400 with errorCode 704 when amount exceeds approved credit limit', async () => {
     const result = await lambdaHandler({
       ...baseEvent,
-      body: JSON.stringify({ monto: 15000, plazo: 12 }),
+      body: JSON.stringify({ amount: 15000, term: 12 }),
     } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -132,10 +132,10 @@ describe('creditConditions', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when plazo exceeds approved term', async () => {
+  it('should return 400 with errorCode 704 when term exceeds approved term', async () => {
     const result = await lambdaHandler({
       ...baseEvent,
-      body: JSON.stringify({ monto: 5000, plazo: 36 }),
+      body: JSON.stringify({ amount: 5000, term: 36 }),
     } as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

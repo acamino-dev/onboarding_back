@@ -35,8 +35,8 @@ describe('createKycProcess integration', () => {
     })
 
     expect(Item?.userId).toBe(TEST_KYC_USER_ID)
-    expect(Item?.monto).toBe(8000)
-    expect(Item?.plazo).toBe(18)
+    expect(Item?.amount).toBe(8000)
+    expect(Item?.term).toBe(18)
     expect(Item?.step).toBe('CONDITIONS')
     expect(Item?.created_at).toBeGreaterThan(0)
   })

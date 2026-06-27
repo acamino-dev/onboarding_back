@@ -4,8 +4,8 @@ import { MAX_CREDIT_AMOUNT, MIN_PLAZO_MONTHS } from '../../../../shared/constant
 import type { RequestBody } from '../types/RequestBody'
 
 const schema = z.object({
-  monto: z.number().positive().max(MAX_CREDIT_AMOUNT),
-  plazo: z.number().int().min(MIN_PLAZO_MONTHS),
+  amount: z.number().positive().max(MAX_CREDIT_AMOUNT),
+  term: z.number().int().min(MIN_PLAZO_MONTHS),
 })
 
 export const validateBody = (rawBody: string): RequestBody => {

@@ -48,8 +48,8 @@ describe('getCreditOffer integration', () => {
   it('returns credit offer for user with type offer', async () => {
     const result = await getCreditOffer(TEST_OFFER_USER_ID, CREDIT_HISTORY_REQUESTS_TABLE)
     expect(result.amount).toBe(TEST_CREDIT_OFFER.offer.amount)
-    expect(result.tasa).toBe(TEST_CREDIT_OFFER.offer.tasa)
-    expect(result.plazo).toBe(TEST_CREDIT_OFFER.offer.plazo)
+    expect(result.rate).toBe(TEST_CREDIT_OFFER.offer.rate)
+    expect(result.term).toBe(TEST_CREDIT_OFFER.offer.term)
   })
 
   it('throws NotFoundError when userId has no credit analysis', async () => {

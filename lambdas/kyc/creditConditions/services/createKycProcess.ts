@@ -11,8 +11,8 @@ export type KycProcess = {
 
 export const createKycProcess = async (
   userId: string,
-  monto: number,
-  plazo: number,
+  amount: number,
+  term: number,
   tableName: string
 ): Promise<KycProcess> => {
   const creditId = randomUUID()
@@ -25,8 +25,8 @@ export const createKycProcess = async (
         creditId,
         userId,
         step: KYC_STEPS.CONDITIONS,
-        monto,
-        plazo,
+        amount,
+        term,
         expires_at: now + TTL_SECONDS,
         created_at: now,
       },

@@ -24,29 +24,29 @@ export const lambdaHandler = async (
     const userId = authContext?.userId || process.env.DEV_USER_ID
     if (!userId) throw new AuthError('Missing auth context')
 
-    const { monto, plazo } = validateBody(event.body ?? '')
+    const { amount, term } = validateBody(event.body ?? '')
 
     const creditOffer = await getCreditOffer(userId, CREDIT_HISTORY_REQUESTS_TABLE_NAME)
 
-    if (monto > creditOffer.amount) {
+    if (amount > creditOffer.amount) {
       throw new ForbiddenError('Requested amount exceeds approved credit limit', {
         file: 'lambdas/kyc/creditConditions/app.ts',
         function: 'lambdaHandler',
-        monto,
+        amount,
         approvedAmount: creditOffer.amount,
       })
     }
 
-    if (plazo > creditOffer.plazo) {
+    if (term > creditOffer.term) {
       throw new ForbiddenError('Requested term exceeds approved credit term', {
         file: 'lambdas/kyc/creditConditions/app.ts',
         function: 'lambdaHandler',
-        plazo,
-        approvedPlazo: creditOffer.plazo,
+        term,
+        approvedTerm: creditOffer.term,
       })
     }
 
-    const kycProcess = await createKycProcess(userId, monto, plazo, KYC_TABLE_NAME)
+    const kycProcess = await createKycProcess(userId, amount, term, KYC_TABLE_NAME)
 
     return createResponsePublic(200, kycProcess)
   } catch (e) {

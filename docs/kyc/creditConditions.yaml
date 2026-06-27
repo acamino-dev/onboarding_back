@@ -6,7 +6,7 @@ info:
 paths:
   /kyc/credit/conditions:
     post:
-      summary: Validates requested monto and plazo against the user's approved credit offer and initializes the KYC process
+      summary: Validates requested amount and term against the user's approved credit offer and initializes the KYC process
       requestBody:
         required: true
         content:
@@ -32,14 +32,14 @@ components:
     RequestBody:
       type: object
       required:
-        - monto
-        - plazo
+        - amount
+        - term
       properties:
-        monto:
+        amount:
           type: number
           description: Requested credit amount in MXN. Must be positive and at most 35000.
           example: 5000
-        plazo:
+        term:
           type: integer
           description: Requested term in months. Minimum 3.
           example: 12
@@ -67,9 +67,9 @@ components:
           type: integer
           description: |
             Internal error code:
-            702 – validation error (missing/invalid body fields, monto ≤ 0, plazo < 3, monto > 35000)
+            702 – validation error (missing/invalid body fields, amount ≤ 0, term < 3, amount > 35000)
             703 – unauthorized (missing auth context)
-            704 – forbidden (active credit exists, or monto/plazo exceeds approved offer)
+            704 – forbidden (active credit exists, or amount/term exceeds approved offer)
             705 – not found (no credit analysis found for user)
             708 – internal server error
           enum: [702, 703, 704, 705, 708]

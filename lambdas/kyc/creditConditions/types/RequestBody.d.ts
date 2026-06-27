@@ -1,4 +1,4 @@
 export type RequestBody = {
-  monto: number
-  plazo: number
+  amount: number
+  term: number
 }

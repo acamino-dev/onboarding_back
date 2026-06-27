@@ -10,16 +10,16 @@ type CreditAnalysisItem = {
     breakdown: Record<string, number>
     offer: {
       amount: number
-      tasa: number
-      plazo: number
+      rate: number
+      term: number
     }
   }
 }
 
 export type CreditOffer = {
   amount: number
-  tasa: number
-  plazo: number
+  rate: number
+  term: number
 }
 
 export const getCreditOffer = async (userId: string, tableName: string): Promise<CreditOffer> => {
