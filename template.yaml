@@ -737,6 +737,44 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  GetKycStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingGetKycStatus${Environment}
+      CodeUri: ./
+      Handler: lambdas/kyc/getKycStatus/app.lambdaHandler
+      Description: POST /kyc/status - retrieves existing KYC process for authenticated user
+      Environment:
+        Variables:
+          KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
+          DEV_USER_ID: !Ref DevUserId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt KycTable.Arn
+                - !Sub '${KycTable.Arn}/index/userId-index'
+        - VPCAccessPolicy: {}
+      Events:
+        GetKycStatus:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /kyc/status
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/kyc/getKycStatus/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL

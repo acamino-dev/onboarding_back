@@ -1,0 +1,108 @@
+openapi: 3.0.3
+info:
+  title: getKycStatus
+  version: 1.0.0
+
+paths:
+  /kyc/status:
+    post:
+      summary: Retrieves existing KYC process for the authenticated user
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    KycProcess:
+      type: object
+      required:
+        - creditId
+        - userId
+        - step
+        - amount
+        - term
+        - rate
+      properties:
+        creditId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        step:
+          type: string
+          enum: [CONDITIONS, INE_FRONT, INE_BACK, ADDRESS, CURP, BANK, REVIEW, BIOMETRIC, STATUS]
+        amount:
+          type: number
+        term:
+          type: number
+        rate:
+          type: number
+        fullName:
+          type: string
+          nullable: true
+        curp:
+          type: string
+          nullable: true
+        rfc:
+          type: string
+          nullable: true
+        birthDate:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        neighborhood:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        accountLast4:
+          type: string
+          nullable: true
+          description: Last 4 digits of linked bank account
+
+    SuccessResponse:
+      type: object
+      required:
+        - kycProcess
+      properties:
+        kycProcess:
+          oneOf:
+            - $ref: '#/components/schemas/KycProcess'
+            - type: boolean
+              enum: [false]
+          description: KYC process data if exists, false if no process found for userId
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            703 – missing or invalid auth context
+            708 – internal server error
+          enum: [703, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
