@@ -32,7 +32,7 @@ const noAuthEvent: Partial<APIGatewayProxyEventV2> = {
 const kycRecord = {
   creditId: 'credit-test-uuid-001',
   userId: TEST_USER_ID,
-  step: 'INE_BACK',
+  step: 'INE_FRONT',
   amount: 10000,
   term: 12,
   created_at: 1750000000,
@@ -123,8 +123,8 @@ describe('getUploadUrl', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when current step is CONDITIONS', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'INE_FRONT' })
+  it('should return 400 with errorCode 704 when step is REVIEW', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'REVIEW' })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

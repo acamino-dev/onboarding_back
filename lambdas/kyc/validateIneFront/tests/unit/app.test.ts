@@ -22,7 +22,7 @@ const baseEvent: Partial<APIGatewayProxyEventV2> = {
 const mockKycRecord = {
   creditId: 'credit-xyz-456',
   userId: 'user-abc-123',
-  step: 'CONDITIONS',
+  step: 'INE_FRONT',
   s3Key: 'onboarding/2025/06/27/credit-xyz-456/INE_FRONT.jpg',
   amount: 10000,
   term: 12,
@@ -75,8 +75,8 @@ describe('validateIneFront', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when step is not CONDITIONS', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, step: 'INE_FRONT' })
+  it('should return 400 with errorCode 704 when step is not INE_FRONT', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, step: 'CONDITIONS' })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

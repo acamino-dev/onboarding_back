@@ -53,9 +53,9 @@ components:
           example: "b2c3d4e5-f6a7-8901-bcde-fa2345678900"
         step:
           type: string
-          description: Current KYC step
-          enum: ["CONDITIONS"]
-          example: "CONDITIONS"
+          description: Next KYC step to perform
+          enum: ["INE_FRONT"]
+          example: "INE_FRONT"
 
     ErrorResponse:
       type: object

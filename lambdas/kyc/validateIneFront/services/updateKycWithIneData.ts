@@ -15,7 +15,7 @@ export const updateKycWithIneData = async (
         'SET #step = :step, nombre = :nombre, curp = :curp, fechaNacimiento = :fechaNacimiento, domicilio = :domicilio',
       ExpressionAttributeNames: { '#step': 'step' },
       ExpressionAttributeValues: {
-        ':step': KYC_STEPS.INE_FRONT,
+        ':step': KYC_STEPS.INE_BACK,
         ':nombre': ineData.nombre,
         ':curp': ineData.curp,
         ':fechaNacimiento': ineData.fechaNacimiento,

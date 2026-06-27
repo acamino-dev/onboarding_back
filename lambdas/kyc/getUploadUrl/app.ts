@@ -1,6 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 import { AuthError, ForbiddenError } from '../../../shared/constants/errors'
-import { KYC_STEPS } from '../../../shared/constants/kyc'
 import { createResponsePublic } from '../../../shared/utils/createResponse'
 import { handleError } from '../../../shared/utils/handleError'
 import { generateUploadUrl } from './services/generateUploadUrl'
@@ -9,7 +8,6 @@ import { saveS3Key } from './services/saveS3Key'
 import { validateBody } from './utils/validators'
 
 const UPLOADABLE_STEPS = new Set(['INE_FRONT', 'INE_BACK', 'ADDRESS', 'CURP', 'BANK'])
-const KYC_STEPS_ORDER = Object.values(KYC_STEPS)
 
 const CONTENT_TYPE_TO_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -38,11 +36,10 @@ export const lambdaHandler = async (
 
     const kycRecord = await getKycByUserId(userId, KYC_TABLE_NAME)
 
-    const nextStepIndex = KYC_STEPS_ORDER.indexOf(kycRecord.step as typeof KYC_STEPS_ORDER[number])
-    const currentStep = nextStepIndex > 0 ? KYC_STEPS_ORDER[nextStepIndex - 1] : undefined
+    const currentStep = kycRecord.step
 
-    if (!currentStep || !UPLOADABLE_STEPS.has(currentStep)) {
-      throw new ForbiddenError(`Step ${currentStep ?? kycRecord.step} does not require a document upload`)
+    if (!UPLOADABLE_STEPS.has(currentStep)) {
+      throw new ForbiddenError(`Step ${currentStep} does not require a document upload`)
     }
 
     const date = new Date(kycRecord.created_at * 1000)

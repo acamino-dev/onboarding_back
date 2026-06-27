@@ -28,15 +28,15 @@ describe('creditConditions', () => {
     delete process.env.DEV_USER_ID
 
     mockGetCreditOffer.mockResolvedValue({ amount: 10000, rate: 0.05, term: 24 })
-    mockCreateKycProcess.mockResolvedValue({ creditId: 'test-credit-uuid', step: 'CONDITIONS' })
+    mockCreateKycProcess.mockResolvedValue({ creditId: 'test-credit-uuid', step: 'INE_FRONT' })
   })
 
-  it('should return 200 with creditId and step CONDITIONS on success', async () => {
+  it('should return 200 with creditId and step INE_FRONT on success', async () => {
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(200)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.creditId).toBe('test-credit-uuid')
-    expect(parsed.step).toBe('CONDITIONS')
+    expect(parsed.step).toBe('INE_FRONT')
   })
 
   it('should return 400 with errorCode 702 when body is empty', async () => {

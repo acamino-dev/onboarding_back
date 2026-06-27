@@ -26,7 +26,7 @@ export const lambdaHandler = async (
 
     const kycRecord = await getKycByUserId(userId, KYC_TABLE_NAME)
 
-    if (kycRecord.step !== KYC_STEPS.CONDITIONS) {
+    if (kycRecord.step !== KYC_STEPS.INE_FRONT) {
       throw new ForbiddenError(`Invalid step for INE front validation: ${kycRecord.step}`)
     }
 

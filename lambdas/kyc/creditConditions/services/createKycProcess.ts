@@ -6,7 +6,7 @@ const TTL_SECONDS = KYC_TTL_DAYS * 24 * 60 * 60
 
 export type KycProcess = {
   creditId: string
-  step: typeof KYC_STEPS.CONDITIONS
+  step: typeof KYC_STEPS.INE_FRONT
 }
 
 export const createKycProcess = async (
@@ -25,7 +25,7 @@ export const createKycProcess = async (
       Item: {
         creditId,
         userId,
-        step: KYC_STEPS.CONDITIONS,
+        step: KYC_STEPS.INE_FRONT,
         amount,
         term,
         rate,
@@ -34,7 +34,7 @@ export const createKycProcess = async (
       },
     })
 
-    return { creditId, step: KYC_STEPS.CONDITIONS }
+    return { creditId, step: KYC_STEPS.INE_FRONT }
   } catch (error) {
     throw new Error(
       `Error on createKycProcess: ${error instanceof Error ? error.message : String(error)}`

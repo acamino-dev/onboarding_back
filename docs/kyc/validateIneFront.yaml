@@ -6,10 +6,10 @@ info:
 paths:
   /kyc/validate-ine-front:
     post:
-      summary: Analyze INE front document with Textract and advance KYC step to INE_FRONT
+      summary: Analyze INE front document with Textract and advance KYC step to INE_BACK
       responses:
         "200":
-          description: Success — document validated, KYC step advanced to INE_FRONT
+          description: Success — document validated, KYC step advanced to INE_BACK
           content:
             application/json:
               schema:
@@ -42,7 +42,7 @@ components:
             Internal error code:
             702 – validation error (document not uploaded, fields missing/invalid)
             703 – auth error (missing userId)
-            704 – forbidden (KYC step is not CONDITIONS)
+            704 – forbidden (KYC step is not INE_FRONT)
             705 – not found (no active KYC process for user)
             708 – internal server error (Textract, S3, or DynamoDB failure)
           enum: [702, 703, 704, 705, 708]
