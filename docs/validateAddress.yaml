@@ -7,6 +7,17 @@ paths:
   /kyc/validate-address:
     post:
       summary: Extracts address from uploaded document with Textract and validates it against the domicilio stored in the KYC record
+      description: |
+        Analyzes the address document (CFE, TELMEX, Totalplay, etc.) stored in S3 under the KYC record's s3Key using Textract async document analysis.
+
+        Address extraction strategy (LINES blocks, postal code anchor):
+        1. Locate the first LINE block containing a 5-digit Mexican postal code.
+        2. Look back up to 11 lines from that anchor.
+        3. Filter out noise lines: prices (lines starting with $), dates (lines containing a Spanish month name), phone numbers, pure-number lines (e.g. account numbers), and known single-word labels (e.g. "TELÉFONO").
+        4. Join the remaining lines as the extracted address.
+        Fallback: if no postal code is found, searches for street-type keywords (CALLE, AV, BLVD, etc.) or colony keywords (COL, FRACC, etc.) in LINES.
+
+        The extracted address is then fuzzy-matched against kycRecord.domicilio (captured from INE front validation). A mismatch returns 702.
       responses:
         "200":
           description: Success — address matches, KYC step advanced to CURP

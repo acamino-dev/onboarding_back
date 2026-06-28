@@ -56,11 +56,27 @@ const CP_PATTERN = /\b\d{5}\b/
 const STREET_PATTERN = /\b(CALLE|AV\.?|AVENIDA|BLVD\.?|BOULEVARD|PRIV\.?|PRIVADA|CALZ\.?|CALZADA|CARR\.?|CARRETERA|AND\.?|ANDADOR)\b/
 const COLONY_PATTERN = /\b(COL\.?|COLONIA|FRACC\.?|FRACCIONAMIENTO|UNIDAD|RESIDENCIAL|BARRIO|SECC\.?)\b/
 
+const PRICE_LINE = /^\$/
+const DATE_LINE =
+  /\b(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\b/
+const PHONE_LINE = /\(\d{2}\)\s*\d{2}|\b\d{2}\s+\d{2}\s+\d{2}\s+\d{2}/
+const PURE_NUMBER_LINE = /^[\d\s]+$/
+const KNOWN_LABEL_LINE = /^(TELÉFONO|TELEFONO)$/
+
+const isNoiseLine = (line: string): boolean =>
+  PRICE_LINE.test(line) ||
+  DATE_LINE.test(line) ||
+  PHONE_LINE.test(line) ||
+  PURE_NUMBER_LINE.test(line) ||
+  KNOWN_LABEL_LINE.test(line)
+
 const extractAddressByPostalCode = (lines: string[]): string | undefined => {
   const cpIdx = lines.findIndex((l) => CP_PATTERN.test(l))
   if (cpIdx === -1) return undefined
-  const start = Math.max(0, cpIdx - 3)
-  return lines.slice(start, cpIdx + 1).join(' ').trim()
+  const start = Math.max(0, cpIdx - 11)
+  const filtered = lines.slice(start, cpIdx + 1).filter((l) => !isNoiseLine(l))
+  if (filtered.length === 0) return undefined
+  return filtered.join(' ').trim()
 }
 
 const extractAddressByComponents = (lines: string[]): string | undefined => {
