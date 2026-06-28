@@ -221,3 +221,4 @@ Scaffolds full directory structure, registers function in `template.yaml`, gener
 
 - [ ] S3 bucket lifecycle policy — KYC documents accumulate indefinitely, no expiry rule
 - [ ] CI/CD pipeline — deploys are manual (`sam deploy`), no GitHub Actions or CodePipeline
+- [ ] File size limit on KYC uploads — presigned URL in `getUploadUrl` has no `ContentLengthRange` condition; enforce a max (e.g. 10 MB) via S3 presigned URL policy condition so oversized documents are rejected at S3 before the lambda validates them
