@@ -1,66 +1,30 @@
-import { AnalyzeDocumentCommand, TextractClient, type Block, type Relationship } from '@aws-sdk/client-textract'
+import { AnalyzeDocumentCommand, TextractClient, type Block } from '@aws-sdk/client-textract'
 import { ValidationError } from '../../../../shared/constants/errors'
 
 const textractClient = new TextractClient({})
 
-const getTextForBlock = (block: Block, blockMap: Map<string, Block>): string => {
-  if (!block.Relationships) return ''
-  return (block.Relationships as Relationship[])
-    .filter((r: Relationship) => r.Type === 'CHILD')
-    .flatMap((r: Relationship) => r.Ids ?? [])
-    .map((id: string) => blockMap.get(id))
-    .filter((b): b is Block => b?.BlockType === 'WORD')
-    .map((b: Block) => b.Text ?? '')
-    .join(' ')
-}
+// MRZ name line: only uppercase letters and '<', contains '<<', no digits, length >= 15
+const MRZ_NAME_LINE_PATTERN = /^[A-ZÁÉÍÓÚÜÑ<]{15,}$/
 
-// Lines on the INE back that signal end of the name section
-const BACK_NAME_STOP_PATTERNS = [
-  /^DOMICILIO/,
-  /^DIRECCI[OÓ]N/,
-  /^MUNICIPIO/,
-  /^DELEGACI[OÓ]N/,
-  /^ENTIDAD/,
-  /^SECCI[OÓ]N/,
-  /^CLAVE DE ELECTOR/,
-  /^FOLIO/,
-  /^CURP/,
-  /^VIGENCIA/,
-  /^FECHA/,
-]
-
-// Lines interspersed near the name that are not name parts
-const BACK_NAME_SKIP_PATTERNS = [
-  /^ESTADOS UNIDOS/,
-  /^INSTITUTO/,
-  /^ELECTORAL/,
-  /^MEXICO/,
-  /^NOMBRE/,
-  /^SEXO/,
-  /^A[NÑ]O/,
-]
-
-const extractNameFromLines = (blocks: Block[]): string | undefined => {
-  const lines = blocks
+// Parse MRZ name line format: SURNAME1<SURNAME2<<GIVENNAME1<GIVENNAME2<<<
+const extractNameFromMrz = (blocks: Block[]): string | undefined => {
+  const mrzLine = blocks
     .filter((b: Block) => b.BlockType === 'LINE')
     .map((b: Block) => b.Text?.toUpperCase().trim() ?? '')
-    .filter((t) => t.length > 0)
+    .find((t) => MRZ_NAME_LINE_PATTERN.test(t) && t.includes('<<'))
 
-  // Try to find explicit NOMBRE/NOMBRES label first
-  const nombreIdx = lines.findIndex((t) => t === 'NOMBRE' || t === 'NOMBRES')
-  const startIdx = nombreIdx !== -1 ? nombreIdx + 1 : 0
+  if (!mrzLine) return undefined
 
-  const nameParts: string[] = []
-  for (let i = startIdx; i < lines.length; i++) {
-    const line = lines[i]
-    if (BACK_NAME_STOP_PATTERNS.some((p) => p.test(line))) break
-    if (BACK_NAME_SKIP_PATTERNS.some((p) => p.test(line))) continue
-    if (/^[A-ZÁÉÍÓÚÜÑ\s]{3,}$/.test(line)) nameParts.push(line)
-    // If we found name parts and hit a non-alpha line, stop collecting
-    if (nameParts.length > 0 && !/^[A-ZÁÉÍÓÚÜÑ\s]{3,}$/.test(line)) break
-  }
+  const doubleAngleIdx = mrzLine.indexOf('<<')
+  const surnamesPart = mrzLine.slice(0, doubleAngleIdx)
+  const givenNamesPart = mrzLine.slice(doubleAngleIdx + 2).replace(/<+$/, '')
 
-  return nameParts.length > 0 ? nameParts.join(' ') : undefined
+  const surnames = surnamesPart.split('<').filter(Boolean)
+  const givenNames = givenNamesPart.split('<').filter(Boolean)
+
+  if (surnames.length === 0 || givenNames.length === 0) return undefined
+
+  return [...givenNames, ...surnames].join(' ')
 }
 
 export const analyzeIneBack = async (bucket: string, key: string): Promise<string> => {
@@ -73,30 +37,12 @@ export const analyzeIneBack = async (bucket: string, key: string): Promise<strin
     )
 
     const blocks = response.Blocks ?? []
-    const blockMap = new Map<string, Block>(blocks.map((b: Block) => [b.Id ?? '', b]))
 
-    // Try KV pairs first
-    for (const block of blocks) {
-      if (block.BlockType !== 'KEY_VALUE_SET' || !block.EntityTypes?.includes('KEY')) continue
-      const keyText = getTextForBlock(block, blockMap).toUpperCase().trim()
-      if (!keyText.includes('NOMBRE')) continue
-      const valueBlockId = (block.Relationships as Relationship[] | undefined)?.find(
-        (r: Relationship) => r.Type === 'VALUE'
-      )?.Ids?.[0]
-      if (!valueBlockId) continue
-      const valueBlock = blockMap.get(valueBlockId)
-      if (!valueBlock) continue
-      const nombre = getTextForBlock(valueBlock, blockMap).trim()
-      if (nombre) return nombre
-    }
+    // Primary: MRZ name line (most reliable on INE back)
+    const mrzName = extractNameFromMrz(blocks)
+    if (mrzName) return mrzName
 
-    // Fall back to LINE-based extraction
-    const nombre = extractNameFromLines(blocks)
-    if (!nombre) {
-      throw new ValidationError('Name not found in INE back document')
-    }
-
-    return nombre
+    throw new ValidationError('Name not found in INE back document')
   } catch (error) {
     if (error instanceof ValidationError) throw error
     throw new Error(

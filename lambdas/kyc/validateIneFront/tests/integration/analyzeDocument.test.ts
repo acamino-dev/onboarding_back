@@ -2,7 +2,7 @@ import { AnalyzeDocumentCommand, TextractClient, type Block, type Relationship }
 import { analyzeDocument } from '../../services/analyzeDocument'
 
 const BUCKET = 'acamino-file-system-dev'
-const KEY = 'onboarding/2026/06/27/251e6e00-f6ba-4bb7-a427-70ab1f82320a/INE_FRONT.jpg'
+const KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/INE_FRONT.jpg'
 
 const pad = (s: string, n: number): string => s.slice(0, n).padEnd(n)
 

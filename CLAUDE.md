@@ -128,6 +128,17 @@ NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.integration.config
 
 **Rule:** A change is only verified when BOTH suites pass. If integration tests don't exist yet for a lambda, note it explicitly — do not claim the change is verified on unit tests alone.
 
+### `noEmit` is mandatory — never run tests that emit `.js`
+
+Every `tsconfig.json` (lambda-level **and** `tsconfig.base.json`) MUST set `"noEmit": true`. Both unit and integration runs must execute under this config.
+
+**Why:** `tsc` compiles `.ts` → `.js` by default. Tests run TypeScript directly via `ts-jest` (in-memory), so emitted `.js` is never needed. If a compile step emits `.js` next to a `.ts`, Jest resolves the `.js` **before** the `.ts` — so a **stale compiled version runs instead of the current source**, and edits to the `.ts` silently have no effect on test output. This has bitten the repo twice (`shared/` instanceof breakage; `validateIneBack` name extraction).
+
+**Rules:**
+- Never remove `"noEmit": true` from any tsconfig, and never run `tsc`/tests with a config that emits.
+- Tracked/compiled `.js` are forbidden under `lambdas/**/services/`, `lambdas/**/tests/`, and `shared/**` — `.gitignore` blocks them; do not force-add.
+- Symptom check: if a source `.ts` change has **zero effect** on test output, look for a shadowing `.js` and delete it.
+
 ### Unit test required cases
 
 Every lambda test suite (`tests/unit/app.test.ts`) must cover these cases in addition to its business-logic scenarios:

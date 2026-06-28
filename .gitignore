@@ -143,6 +143,10 @@ dist/
 tmp/
 temp/
 
+# Compiled lambda artifacts — TS sources only; stale .js shadow .ts in jest resolution
+lambdas/**/*.js
+shared/**/*.js
+
 ### OSX ###
 # General
 .DS_Store

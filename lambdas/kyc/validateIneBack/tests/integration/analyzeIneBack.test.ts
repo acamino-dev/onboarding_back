@@ -2,7 +2,7 @@ import { AnalyzeDocumentCommand, TextractClient, type Block, type Relationship }
 import { analyzeIneBack } from '../../services/analyzeIneBack'
 
 const BUCKET = 'acamino-file-system-dev'
-const KEY = 'onboarding/2026/06/27/251e6e00-f6ba-4bb7-a427-70ab1f82320a/INE_BACK.jpg'
+const KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/INE_BACK.jpg'
 
 const pad = (s: string, n: number): string => s.slice(0, n).padEnd(n)
 
@@ -30,6 +30,16 @@ describe('analyzeIneBack integration', () => {
     const blocks = response.Blocks ?? []
     const blockMap = new Map<string, Block>(blocks.map((b) => [b.Id ?? '', b]))
 
+    const getChildText = (block: Block): string =>
+      (block.Relationships as Relationship[] | undefined)
+        ?.filter((r) => r.Type === 'CHILD')
+        .flatMap((r) => r.Ids ?? [])
+        .map((id) => blockMap.get(id))
+        .filter((b): b is Block => b?.BlockType === 'WORD')
+        .map((b) => b.Text ?? '')
+        .join(' ') ?? ''
+
+    // ── Tabla 1: LINE blocks ──────────────────────────────────────────────
     console.log('\nLINE BLOCKS')
     const lineRows = blocks
       .filter((b) => b.BlockType === 'LINE')
@@ -45,6 +55,24 @@ describe('analyzeIneBack integration', () => {
       })
     printTable(['Texto línea', 'Conf%', 'Palabras (word, confianza)'], lineRows)
 
+    // ── Tabla 2: KV pairs ────────────────────────────────────────────────
+    console.log('\nKEY-VALUE PAIRS')
+    const kvRows: string[][] = []
+    for (const block of blocks) {
+      if (block.BlockType !== 'KEY_VALUE_SET' || !block.EntityTypes?.includes('KEY')) continue
+      const keyText = getChildText(block).toUpperCase().trim()
+      const valueBlockId = (block.Relationships as Relationship[])?.find(
+        (r) => r.Type === 'VALUE'
+      )?.Ids?.[0]
+      const valueBlock = valueBlockId ? blockMap.get(valueBlockId) : undefined
+      const valueText = valueBlock ? getChildText(valueBlock).trim() : ''
+      const keyConf = block.Confidence?.toFixed(1) ?? '-'
+      const valConf = valueBlock?.Confidence?.toFixed(1) ?? '-'
+      kvRows.push([keyText, `${keyConf}%`, valueText, `${valConf}%`])
+    }
+    printTable(['KEY', 'Conf%', 'VALUE', 'Conf%'], kvRows)
+
+    // ── Tabla 3: extracción del servicio ─────────────────────────────────
     console.log('\nEXTRACCIÓN DEL SERVICIO')
     let nombre: string | undefined
     let serviceError = ''
@@ -55,9 +83,9 @@ describe('analyzeIneBack integration', () => {
     }
 
     const validationRows = [
-      ['nombre', nombre ?? `ERROR: ${serviceError}`],
+      ['nombre', 'NOMBRE / NOMBRES', nombre ?? `ERROR: ${serviceError}`],
     ]
-    printTable(['Campo', 'Valor extraído'], validationRows)
+    printTable(['Campo', 'Candidatos buscados', 'Valor extraído'], validationRows)
 
     expect(nombre).toBeDefined()
     expect((nombre ?? '').length).toBeGreaterThan(0)
