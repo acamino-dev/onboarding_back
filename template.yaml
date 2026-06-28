@@ -135,10 +135,6 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
-      TimeToLiveSpecification:
-        AttributeName: expires_at
-        Enabled: true
-
   OnboardingApi:
     Type: AWS::Serverless::HttpApi
     Properties:

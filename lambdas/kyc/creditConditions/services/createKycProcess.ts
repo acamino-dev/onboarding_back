@@ -1,8 +1,6 @@
 import { randomUUID } from 'crypto'
 import { dynamoDb } from '../../../../shared/db/dynamodb'
-import { KYC_STEPS, KYC_TTL_DAYS } from '../../../../shared/constants/kyc'
-
-const TTL_SECONDS = KYC_TTL_DAYS * 24 * 60 * 60
+import { KYC_STEPS } from '../../../../shared/constants/kyc'
 
 export type KycProcess = {
   creditId: string
@@ -29,7 +27,6 @@ export const createKycProcess = async (
         amount,
         term,
         rate,
-        expires_at: now + TTL_SECONDS,
         created_at: now,
       },
     })

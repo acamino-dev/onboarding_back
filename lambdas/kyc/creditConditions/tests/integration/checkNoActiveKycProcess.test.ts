@@ -2,9 +2,8 @@ import { dynamoDb } from '../../../../../shared/db/dynamodb'
 import { DuplicatedError } from '../../../../../shared/constants/errors'
 import { checkNoActiveKycProcess } from '../../services/checkNoActiveKycProcess'
 import { KYC_TABLE, TEST_EXISTING_KYC_USER_ID } from './helpers/constants'
-import { KYC_STEPS, KYC_TTL_DAYS } from '../../../../../shared/constants/kyc'
+import { KYC_STEPS } from '../../../../../shared/constants/kyc'
 
-const TTL_SECONDS = KYC_TTL_DAYS * 24 * 60 * 60
 const EXISTING_CREDIT_ID = 'test-existing-kyc-credit-id-check'
 
 beforeAll(async () => {
@@ -18,7 +17,6 @@ beforeAll(async () => {
       term: 12,
       rate: 0.05,
       created_at: Math.floor(Date.now() / 1000),
-      expires_at: Math.floor(Date.now() / 1000) + TTL_SECONDS,
     },
   })
 })

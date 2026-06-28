@@ -1,9 +1,6 @@
 import { dynamoDb } from '../../../../../shared/db/dynamodb'
 import { createKycProcess } from '../../services/createKycProcess'
 import { KYC_TABLE, TEST_KYC_USER_ID } from './helpers/constants'
-import { KYC_TTL_DAYS } from '../../../../../shared/constants/kyc'
-
-const TTL_SECONDS = KYC_TTL_DAYS * 24 * 60 * 60
 
 let createdCreditId: string
 
@@ -42,18 +39,15 @@ describe('createKycProcess integration', () => {
     expect(Item?.created_at).toBeGreaterThan(0)
   })
 
-  it('sets TTL approximately 15 days from creation', async () => {
-    const before = Math.floor(Date.now() / 1000)
+  it('does not set expires_at — KYC records never expire', async () => {
     const result = await createKycProcess(TEST_KYC_USER_ID, 3000, 6, 0.05, KYC_TABLE)
     createdCreditId = result.creditId
-    const after = Math.floor(Date.now() / 1000)
 
     const { Item } = await dynamoDb.get({
       TableName: KYC_TABLE,
       Key: { creditId: result.creditId },
     })
 
-    expect(Item?.expires_at).toBeGreaterThanOrEqual(before + TTL_SECONDS)
-    expect(Item?.expires_at).toBeLessThanOrEqual(after + TTL_SECONDS)
+    expect(Item?.expires_at).toBeUndefined()
   })
 })
