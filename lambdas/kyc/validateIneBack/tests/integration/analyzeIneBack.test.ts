@@ -41,19 +41,35 @@ describe('analyzeIneBack integration', () => {
 
     // ── Tabla 1: LINE blocks ──────────────────────────────────────────────
     console.log('\nLINE BLOCKS')
-    const lineRows = blocks
-      .filter((b) => b.BlockType === 'LINE')
-      .map((b) => {
-        const words = (b.Relationships as Relationship[] | undefined)
+    const lineBlocks = blocks.filter((b) => b.BlockType === 'LINE')
+    const lineRows = lineBlocks.map((b) => {
+      const words =
+        (b.Relationships as Relationship[] | undefined)
           ?.filter((r) => r.Type === 'CHILD')
           .flatMap((r) => r.Ids ?? [])
           .map((id) => blockMap.get(id))
           .filter((w): w is Block => w?.BlockType === 'WORD')
           .map((w) => `${w.Text}(${w.Confidence?.toFixed(0)}%)`)
           .join('  ') ?? ''
-        return [b.Text ?? '', `${b.Confidence?.toFixed(1)}%`, words]
-      })
+      return [b.Text ?? '', `${b.Confidence?.toFixed(1)}%`, words]
+    })
     printTable(['Texto línea', 'Conf%', 'Palabras (word, confianza)'], lineRows)
+
+    // ── IDMEX marker ─────────────────────────────────────────────────────
+    const idmexBlock = lineBlocks.find((b) =>
+      /^IDMEX/.test(b.Text?.toUpperCase().trim() ?? '')
+    )
+    console.log('\nIDMEX MARKER')
+    printTable(
+      ['Check', 'Texto detectado', 'Conf%'],
+      [
+        [
+          idmexBlock ? 'FOUND ✓' : 'NOT FOUND ✗',
+          idmexBlock?.Text ?? '-',
+          idmexBlock ? `${idmexBlock.Confidence?.toFixed(1)}%` : '-',
+        ],
+      ]
+    )
 
     // ── Tabla 2: KV pairs ────────────────────────────────────────────────
     console.log('\nKEY-VALUE PAIRS')
@@ -83,10 +99,11 @@ describe('analyzeIneBack integration', () => {
     }
 
     const validationRows = [
-      ['nombre', 'NOMBRE / NOMBRES', nombre ?? `ERROR: ${serviceError}`],
+      ['nombre', 'MRZ línea de nombre (APELLIDOS NOMBRES)', nombre ?? `ERROR: ${serviceError}`],
     ]
-    printTable(['Campo', 'Candidatos buscados', 'Valor extraído'], validationRows)
+    printTable(['Campo', 'Fuente', 'Valor extraído'], validationRows)
 
+    expect(idmexBlock).toBeDefined()
     expect(nombre).toBeDefined()
     expect((nombre ?? '').length).toBeGreaterThan(0)
   }, 60000)

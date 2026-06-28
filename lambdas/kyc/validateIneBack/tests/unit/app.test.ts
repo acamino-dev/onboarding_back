@@ -114,6 +114,18 @@ describe('validateIneBack', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
+  it('should return 400 with errorCode 702 when document is not INE back', async () => {
+    const { ValidationError } = await import('../../../../../shared/constants/errors')
+    mockAnalyzeIneBack.mockRejectedValue(
+      new ValidationError('Document is not INE back (IDMEX marker not found)')
+    )
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
   it('should return 400 with errorCode 702 when names do not match', async () => {
     mockAnalyzeIneBack.mockResolvedValue('MARIA LOPEZ HERNANDEZ')
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
