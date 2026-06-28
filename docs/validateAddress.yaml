@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: validateAddress
+  version: 1.0.0
+
+paths:
+  /kyc/validate-address:
+    post:
+      summary: Extracts address from uploaded document with Textract and validates it against the domicilio stored in the KYC record
+      responses:
+        "200":
+          description: Success — address matches, KYC step advanced to CURP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+          example: 701
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (address mismatch, missing s3Key, missing domicilio, Textract extraction failure)
+            703 – auth error (missing userId)
+            704 – forbidden (wrong KYC step)
+            705 – not found (KYC record not found)
+            708 – internal server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
