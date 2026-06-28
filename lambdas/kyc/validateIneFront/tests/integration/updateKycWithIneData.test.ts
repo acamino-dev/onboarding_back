@@ -27,7 +27,7 @@ describe('updateKycWithIneData integration', () => {
       Key: { creditId: TEST_CREDIT_ID },
     })
 
-    expect(result.Item?.['step']).toBe('INE_FRONT')
+    expect(result.Item?.['step']).toBe('INE_BACK')
     expect(result.Item?.['nombre']).toBe(TEST_INE_DATA.nombre)
     expect(result.Item?.['curp']).toBe(TEST_INE_DATA.curp)
     expect(result.Item?.['fechaNacimiento']).toBe(TEST_INE_DATA.fechaNacimiento)

@@ -23,6 +23,48 @@ const findField = (kvPairs: Record<string, string>, candidates: string[]): strin
   return undefined
 }
 
+// Lines that mark end of the name section — stop collecting when hit
+const NOMBRE_STOP_PATTERNS = [
+  /^DOMICILIO/,
+  /^DIRECCI[OÓ]N/,
+  /^CURP/,
+  /^FECHA/,
+  /^CLAVE DE ELECTOR/,
+  /^CREDENCIAL/,
+  /^INSTITUTO/,
+  /^UNIDOS MEXICANOS/,
+]
+
+// Lines interspersed near NOMBRE that are not name parts — skip but keep looking
+const NOMBRE_SKIP_PATTERNS = [
+  /^SEXO/,
+  /^VIGENCIA/,
+  /^SECCI[OÓ]N/,
+  /^A[NÑ]O DE REGISTRO/,
+  /^MEXICO/,
+]
+
+const extractNameFromLines = (blocks: Block[]): string | undefined => {
+  const lines = blocks
+    .filter((b: Block) => b.BlockType === 'LINE')
+    .map((b: Block) => b.Text?.toUpperCase().trim() ?? '')
+    .filter((t) => t.length > 0)
+
+  const nombreIdx = lines.findIndex((t) => t === 'NOMBRE' || t === 'NOMBRES')
+  if (nombreIdx === -1) return undefined
+
+  const nameParts: string[] = []
+  for (let i = nombreIdx + 1; i < lines.length; i++) {
+    const line = lines[i]
+    if (NOMBRE_STOP_PATTERNS.some((p) => p.test(line))) break
+    if (NOMBRE_SKIP_PATTERNS.some((p) => p.test(line))) continue
+    // only pure alphabetic lines (letters, spaces, accented chars) — excludes "SEXO H", numbers, etc.
+    if (/^[A-ZÁÉÍÓÚÜÑ\s]{3,}$/.test(line)) nameParts.push(line)
+  }
+
+  return nameParts.length > 0 ? nameParts.join(' ') : undefined
+}
+
 export const analyzeDocument = async (bucket: string, key: string): Promise<IneData> => {
   try {
     const response = await textractClient.send(
@@ -51,20 +93,29 @@ export const analyzeDocument = async (bucket: string, key: string): Promise<IneD
       kvPairs[keyText] = getTextForBlock(valueBlock, blockMap).trim()
     }
 
-    const nombre = findField(kvPairs, ['NOMBRE', 'NOMBRES'])
+    const nombre = findField(kvPairs, ['NOMBRE', 'NOMBRES']) ?? extractNameFromLines(blocks)
     const curp = findField(kvPairs, ['CURP'])
     const fechaNacimiento = findField(kvPairs, ['FECHA DE NACIMIENTO', 'FECHA NAC', 'NACIMIENTO'])
     const domicilio = findField(kvPairs, ['DOMICILIO', 'DIRECCION', 'DIRECCIÓN'])
+    const vigencia = findField(kvPairs, ['VIGENCIA'])
 
     const missingFields = [
       !nombre && 'nombre',
       !curp && 'curp',
       !fechaNacimiento && 'fechaNacimiento',
       !domicilio && 'domicilio',
+      !vigencia && 'vigencia',
     ].filter(Boolean)
 
     if (missingFields.length > 0) {
       throw new ValidationError(`Missing required INE fields: ${missingFields.join(', ')}`)
+    }
+
+    const years = vigencia!.match(/\d{4}/g)?.map(Number) ?? []
+    const expirationYear = Math.max(...years)
+    const currentYear = new Date().getFullYear()
+    if (expirationYear < currentYear) {
+      throw new ValidationError(`INE expired: vigencia ${vigencia}`)
     }
 
     return { nombre: nombre!, curp: curp!, fechaNacimiento: fechaNacimiento!, domicilio: domicilio! }
