@@ -988,9 +988,11 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
-                - textract:AnalyzeDocument
+                - textract:StartDocumentAnalysis
+                - textract:GetDocumentAnalysis
               Resource: '*'
         - VPCAccessPolicy: {}
+      Timeout: 900
       Events:
         ValidateAddress:
           Type: HttpApi

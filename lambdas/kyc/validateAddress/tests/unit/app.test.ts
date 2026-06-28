@@ -23,7 +23,7 @@ const mockKycRecord = {
   creditId: 'credit-xyz-456',
   userId: 'user-abc-123',
   step: 'ADDRESS',
-  s3Key: 'onboarding/2025/06/28/credit-xyz-456/ADDRESS.jpg',
+  s3Key: 'onboarding/2025/06/28/credit-xyz-456/ADDRESS.pdf',
   domicilio: 'CALLE HIDALGO 123 COL CENTRO MONTERREY NL',
   amount: 10000,
   term: 12,
