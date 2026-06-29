@@ -5,6 +5,7 @@ import type { IneData } from '../types/IneData'
 export const updateKycWithIneData = async (
   creditId: string,
   ineData: IneData,
+  rfc: string,
   tableName: string
 ): Promise<void> => {
   try {
@@ -12,14 +13,18 @@ export const updateKycWithIneData = async (
       TableName: tableName,
       Key: { creditId },
       UpdateExpression:
-        'SET #step = :step, nombre = :nombre, curp = :curp, fechaNacimiento = :fechaNacimiento, domicilio = :domicilio',
-      ExpressionAttributeNames: { '#step': 'step' },
+        'SET #step = :step, fullName = :fullName, curp = :curp, rfc = :rfc, birthDate = :birthDate, #address = :address, neighborhood = :neighborhood, city = :city, postalCode = :postalCode',
+      ExpressionAttributeNames: { '#step': 'step', '#address': 'address' },
       ExpressionAttributeValues: {
         ':step': KYC_STEPS.INE_BACK,
-        ':nombre': ineData.nombre,
+        ':fullName': ineData.nombre,
         ':curp': ineData.curp,
-        ':fechaNacimiento': ineData.fechaNacimiento,
-        ':domicilio': ineData.domicilio,
+        ':rfc': rfc,
+        ':birthDate': ineData.fechaNacimiento,
+        ':address': ineData.domicilio,
+        ':neighborhood': null,
+        ':city': null,
+        ':postalCode': null,
       },
     })
   } catch (error) {

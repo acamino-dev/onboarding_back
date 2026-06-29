@@ -27,7 +27,7 @@ export const getKycByUserId = async (userId: string, tableName: string): Promise
       userId: item['userId'] as string,
       step: item['step'] as string,
       s3Key: item['s3Key'] as string | undefined,
-      domicilio: item['domicilio'] as string | undefined,
+      address: item['address'] as string | undefined,
       amount: item['amount'] as number,
       term: item['term'] as number,
       created_at: item['created_at'] as number,

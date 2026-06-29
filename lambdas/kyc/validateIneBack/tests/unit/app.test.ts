@@ -24,7 +24,7 @@ const mockKycRecord = {
   userId: 'user-abc-123',
   step: 'INE_BACK',
   s3Key: 'onboarding/2025/06/27/credit-xyz-456/INE_BACK.jpg',
-  nombre: 'JUAN PÉREZ GARCÍA',
+  fullName: 'JUAN PÉREZ GARCÍA',
   amount: 10000,
   term: 12,
   created_at: 1750000000,
@@ -95,8 +95,8 @@ describe('validateIneBack', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when nombre is missing in KYC record', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, nombre: undefined })
+  it('should return 400 with errorCode 702 when fullName is missing in KYC record', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, fullName: undefined })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

@@ -24,7 +24,7 @@ const mockKycRecord = {
   userId: 'user-abc-123',
   step: 'ADDRESS',
   s3Key: 'onboarding/2025/06/28/credit-xyz-456/ADDRESS.pdf',
-  domicilio: 'CALLE HIDALGO 123 COL CENTRO MONTERREY NL',
+  address: 'CALLE HIDALGO 123 COL CENTRO MONTERREY NL',
   amount: 10000,
   term: 12,
   created_at: 1750000000,
@@ -95,8 +95,8 @@ describe('validateAddress', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when domicilio is missing in KYC record', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, domicilio: undefined })
+  it('should return 400 with errorCode 702 when address is missing in KYC record', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, address: undefined })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

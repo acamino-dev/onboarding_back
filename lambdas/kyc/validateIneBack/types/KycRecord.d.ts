@@ -3,7 +3,7 @@ export type KycRecord = {
   userId: string
   step: string
   s3Key?: string
-  nombre?: string
+  fullName?: string
   amount: number
   term: number
   created_at: number

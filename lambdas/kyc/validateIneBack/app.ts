@@ -35,14 +35,14 @@ export const lambdaHandler = async (
       throw new ValidationError('INE back document has not been uploaded')
     }
 
-    if (!kycRecord.nombre) {
-      throw new ValidationError('KYC record missing nombre from INE front validation')
+    if (!kycRecord.fullName) {
+      throw new ValidationError('KYC record missing fullName from INE front validation')
     }
 
     const extractedName = await analyzeIneBack(S3_BUCKET_NAME, kycRecord.s3Key)
 
     const normalizedExtracted = normalizeNameForComparison(extractedName)
-    const normalizedStored = normalizeNameForComparison(kycRecord.nombre)
+    const normalizedStored = normalizeNameForComparison(kycRecord.fullName)
 
     if (normalizedExtracted !== normalizedStored) {
       throw new ValidationError('Name mismatch: INE back name does not match KYC record')

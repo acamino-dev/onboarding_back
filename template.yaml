@@ -845,8 +845,14 @@ Resources:
           S3_BUCKET_NAME: !Sub
             - acamino-file-system-${EnvLow}
             - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
+          DB_SECRET_ID: !Sub onboardingCredentials${Environment}
           DEV_USER_ID: !Ref DevUserId
       Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingCredentials${Environment}-*
         - Statement:
             - Effect: Allow
               Action:

@@ -35,13 +35,13 @@ export const lambdaHandler = async (
       throw new ValidationError('Address document has not been uploaded')
     }
 
-    if (!kycRecord.domicilio) {
-      throw new ValidationError('KYC record missing domicilio from INE front validation')
+    if (!kycRecord.address) {
+      throw new ValidationError('KYC record missing address from INE front validation')
     }
 
     const extractedAddress = await analyzeAddressDocument(S3_BUCKET_NAME, kycRecord.s3Key)
 
-    if (!addressesMatch(kycRecord.domicilio, extractedAddress)) {
+    if (!addressesMatch(kycRecord.address, extractedAddress)) {
       throw new ValidationError('Address mismatch: document address does not match KYC record')
     }
 

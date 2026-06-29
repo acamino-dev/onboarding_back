@@ -20,13 +20,13 @@ afterAll(async () => {
 })
 
 describe('getKycByUserId integration', () => {
-  it('returns KYC record with s3Key and nombre for existing userId', async () => {
+  it('returns KYC record with s3Key and fullName for existing userId', async () => {
     const result = await getKycByUserId(READ_USER_ID, TABLE_NAME)
     expect(result.creditId).toBe(READ_KYC_RECORD.creditId)
     expect(result.userId).toBe(READ_USER_ID)
     expect(result.step).toBe(READ_KYC_RECORD.step)
     expect(result.s3Key).toBe(READ_KYC_RECORD.s3Key)
-    expect(result.nombre).toBe(READ_KYC_RECORD.nombre)
+    expect(result.fullName).toBe(READ_KYC_RECORD.fullName)
   })
 
   it('throws NotFoundError when userId has no KYC record', async () => {
