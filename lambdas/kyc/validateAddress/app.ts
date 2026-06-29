@@ -31,7 +31,8 @@ export const lambdaHandler = async (
       throw new ForbiddenError(`Invalid step for address validation: ${kycRecord.step}`)
     }
 
-    if (!kycRecord.s3Key) {
+    const addressS3Key = kycRecord.s3Keys?.[KYC_STEPS.ADDRESS]
+    if (!addressS3Key) {
       throw new ValidationError('Address document has not been uploaded')
     }
 
@@ -39,7 +40,7 @@ export const lambdaHandler = async (
       throw new ValidationError('KYC record missing address from INE front validation')
     }
 
-    const extractedAddress = await analyzeAddressDocument(S3_BUCKET_NAME, kycRecord.s3Key)
+    const extractedAddress = await analyzeAddressDocument(S3_BUCKET_NAME, addressS3Key)
 
     if (!addressesMatch(kycRecord.address, extractedAddress)) {
       throw new ValidationError('Address mismatch: document address does not match KYC record')

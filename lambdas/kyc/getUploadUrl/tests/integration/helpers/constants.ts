@@ -8,4 +8,5 @@ export const TEST_KYC_RECORD = {
   amount: 15000,
   term: 24,
   expires_at: Math.floor(Date.now() / 1000) + 86400,
+  s3Keys: {},
 } as const

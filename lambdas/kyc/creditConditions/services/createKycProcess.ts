@@ -28,6 +28,7 @@ export const createKycProcess = async (
         term,
         rate,
         created_at: now,
+        s3Keys: {},
       },
     })
 

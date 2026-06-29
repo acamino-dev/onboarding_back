@@ -2,6 +2,7 @@ import { dynamoDb } from '../../../../shared/db/dynamodb'
 
 export const saveS3Key = async (
   creditId: string,
+  step: string,
   s3Key: string,
   tableName: string
 ): Promise<void> => {
@@ -9,7 +10,8 @@ export const saveS3Key = async (
     await dynamoDb.update({
       TableName: tableName,
       Key: { creditId },
-      UpdateExpression: 'SET s3Key = :s3Key',
+      UpdateExpression: 'SET s3Keys.#step = :s3Key',
+      ExpressionAttributeNames: { '#step': step },
       ExpressionAttributeValues: { ':s3Key': s3Key },
     })
   } catch (error) {

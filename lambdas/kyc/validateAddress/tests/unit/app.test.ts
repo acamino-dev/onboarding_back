@@ -23,7 +23,7 @@ const mockKycRecord = {
   creditId: 'credit-xyz-456',
   userId: 'user-abc-123',
   step: 'ADDRESS',
-  s3Key: 'onboarding/2025/06/28/credit-xyz-456/ADDRESS.pdf',
+  s3Keys: { ADDRESS: 'onboarding/2025/06/28/credit-xyz-456/ADDRESS.pdf' },
   address: 'CALLE HIDALGO 123 COL CENTRO MONTERREY NL',
   amount: 10000,
   term: 12,
@@ -87,7 +87,7 @@ describe('validateAddress', () => {
   })
 
   it('should return 400 with errorCode 702 when no s3Key in record', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, s3Key: undefined })
+    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, s3Keys: undefined })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

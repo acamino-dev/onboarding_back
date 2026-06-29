@@ -2,7 +2,7 @@ export type KycRecord = {
   creditId: string
   userId: string
   step: string
-  s3Key?: string
+  s3Keys?: Partial<Record<string, string>>
   curp?: string
   amount: number
   term: number

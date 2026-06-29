@@ -34,11 +34,12 @@ export const lambdaHandler = async (
       throw new ForbiddenError(`Invalid step for INE front validation: ${kycRecord.step}`)
     }
 
-    if (!kycRecord.s3Key) {
+    const ineFrontS3Key = kycRecord.s3Keys?.[KYC_STEPS.INE_FRONT]
+    if (!ineFrontS3Key) {
       throw new ValidationError('INE front document has not been uploaded')
     }
 
-    const ineData = await analyzeDocument(S3_BUCKET_NAME, kycRecord.s3Key)
+    const ineData = await analyzeDocument(S3_BUCKET_NAME, ineFrontS3Key)
 
     const rfc = await getEmployeeRfc(userId)
 

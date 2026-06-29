@@ -67,7 +67,7 @@ export const lambdaHandler = async (
 
     const uploadUrl = await generateUploadUrl(S3_BUCKET_NAME, s3Key, body.contentType, body.fileSize)
 
-    await saveS3Key(kycRecord.creditId, s3Key, KYC_TABLE_NAME)
+    await saveS3Key(kycRecord.creditId, currentStep, s3Key, KYC_TABLE_NAME)
 
     return createResponsePublic(200, {
       uploadUrl,

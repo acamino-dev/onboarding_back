@@ -31,7 +31,8 @@ export const lambdaHandler = async (
       throw new ForbiddenError(`Invalid step for INE back validation: ${kycRecord.step}`)
     }
 
-    if (!kycRecord.s3Key) {
+    const ineBackS3Key = kycRecord.s3Keys?.[KYC_STEPS.INE_BACK]
+    if (!ineBackS3Key) {
       throw new ValidationError('INE back document has not been uploaded')
     }
 
@@ -39,7 +40,7 @@ export const lambdaHandler = async (
       throw new ValidationError('KYC record missing fullName from INE front validation')
     }
 
-    const extractedName = await analyzeIneBack(S3_BUCKET_NAME, kycRecord.s3Key)
+    const extractedName = await analyzeIneBack(S3_BUCKET_NAME, ineBackS3Key)
 
     const normalizedExtracted = normalizeNameForComparison(extractedName)
     const normalizedStored = normalizeNameForComparison(kycRecord.fullName)

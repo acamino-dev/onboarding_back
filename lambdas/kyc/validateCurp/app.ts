@@ -30,7 +30,8 @@ export const lambdaHandler = async (
       throw new ForbiddenError(`Invalid step for CURP validation: ${kycRecord.step}`)
     }
 
-    if (!kycRecord.s3Key) {
+    const curpS3Key = kycRecord.s3Keys?.[KYC_STEPS.CURP]
+    if (!curpS3Key) {
       throw new ValidationError('CURP document has not been uploaded')
     }
 
@@ -38,7 +39,7 @@ export const lambdaHandler = async (
       throw new ValidationError('KYC record missing CURP from INE front validation')
     }
 
-    const extractedCurp = await analyzeCurpDocument(S3_BUCKET_NAME, kycRecord.s3Key)
+    const extractedCurp = await analyzeCurpDocument(S3_BUCKET_NAME, curpS3Key)
 
     if (extractedCurp !== kycRecord.curp) {
       throw new ValidationError('CURP mismatch: document CURP does not match KYC record')

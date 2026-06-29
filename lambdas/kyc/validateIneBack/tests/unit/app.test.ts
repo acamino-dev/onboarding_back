@@ -23,7 +23,7 @@ const mockKycRecord = {
   creditId: 'credit-xyz-456',
   userId: 'user-abc-123',
   step: 'INE_BACK',
-  s3Key: 'onboarding/2025/06/27/credit-xyz-456/INE_BACK.jpg',
+  s3Keys: { INE_BACK: 'onboarding/2025/06/27/credit-xyz-456/INE_BACK.jpg' },
   fullName: 'JUAN PÉREZ GARCÍA',
   amount: 10000,
   term: 12,
@@ -87,7 +87,7 @@ describe('validateIneBack', () => {
   })
 
   it('should return 400 with errorCode 702 when no s3Key in record', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, s3Key: undefined })
+    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, s3Keys: undefined })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
