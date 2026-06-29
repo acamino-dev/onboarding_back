@@ -1,0 +1,60 @@
+openapi: 3.0.3
+info:
+  title: validateCurp
+  version: 1.0.0
+
+paths:
+  /kyc/validate-curp:
+    post:
+      summary: Extracts CURP from uploaded document with Textract and validates it against the CURP stored in the KYC record
+      description: |
+        Analyzes the CURP document stored in S3 under the KYC record's s3Key using Textract synchronous document analysis (AnalyzeDocumentCommand).
+
+        CURP extraction strategy:
+        1. Parse KEY_VALUE_SET blocks — look for a key containing "CURP" and extract the value.
+        2. Fallback: scan all LINE blocks for a string matching the 18-character CURP regex pattern ([A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]\d).
+
+        The extracted CURP is compared against kycRecord.curp (stored during INE front validation). A mismatch returns 702. On success, KYC step advances to BANK.
+      responses:
+        "200":
+          description: Success — CURP matches, KYC step advanced to BANK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+          example: 701
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (CURP mismatch, missing s3Key, missing curp in KYC record, Textract extraction failure)
+            703 – auth error (missing userId)
+            704 – forbidden (wrong KYC step)
+            705 – not found (KYC record not found)
+            708 – internal server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'

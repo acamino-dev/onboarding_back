@@ -1011,6 +1011,65 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  ValidateCurpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingValidateCurp${Environment}
+      CodeUri: ./
+      Handler: lambdas/kyc/validateCurp/app.lambdaHandler
+      Description: POST /kyc/validate-curp - extracts CURP from document with Textract, validates against KYC record, advances step to BANK
+      Environment:
+        Variables:
+          KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
+          S3_BUCKET_NAME: !Sub
+            - acamino-file-system-${EnvLow}
+            - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
+          DEV_USER_ID: !Ref DevUserId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt KycTable.Arn
+                - !Sub '${KycTable.Arn}/index/userId-index'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt KycTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub
+                - 'arn:aws:s3:::acamino-file-system-${EnvLow}/onboarding/*'
+                - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
+        - Statement:
+            - Effect: Allow
+              Action:
+                - textract:AnalyzeDocument
+              Resource: '*'
+        - VPCAccessPolicy: {}
+      Events:
+        ValidateCurp:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /kyc/validate-curp
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/kyc/validateCurp/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
