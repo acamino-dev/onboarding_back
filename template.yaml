@@ -705,6 +705,13 @@ Resources:
               Action:
                 - dynamodb:PutItem
               Resource: !GetAtt KycTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt KycTable.Arn
+                - !Sub '${KycTable.Arn}/index/userId-index'
       Events:
         CreditConditions:
           Type: HttpApi
