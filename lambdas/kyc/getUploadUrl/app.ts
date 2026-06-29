@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
-import { AuthError, ForbiddenError } from '../../../shared/constants/errors'
+import { AuthError, ForbiddenError, ValidationError } from '../../../shared/constants/errors'
 import { createResponsePublic } from '../../../shared/utils/createResponse'
 import { handleError } from '../../../shared/utils/handleError'
 import { generateUploadUrl } from './services/generateUploadUrl'
@@ -8,6 +8,15 @@ import { saveS3Key } from './services/saveS3Key'
 import { validateBody } from './utils/validators'
 
 const UPLOADABLE_STEPS = new Set(['INE_FRONT', 'INE_BACK', 'ADDRESS', 'CURP', 'BANK'])
+
+const MB = 1024 * 1024
+const STEP_SIZE_LIMIT: Record<string, number> = {
+  INE_FRONT: 5 * MB,
+  INE_BACK: 5 * MB,
+  ADDRESS: 15 * MB,
+  CURP: 15 * MB,
+  BANK: 15 * MB,
+}
 
 const CONTENT_TYPE_TO_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -42,6 +51,13 @@ export const lambdaHandler = async (
       throw new ForbiddenError(`Step ${currentStep} does not require a document upload`)
     }
 
+    const sizeLimit = STEP_SIZE_LIMIT[currentStep]
+    if (body.fileSize > sizeLimit) {
+      throw new ValidationError(
+        `File size exceeds the ${sizeLimit / MB}MB limit for step ${currentStep}`
+      )
+    }
+
     const date = new Date(kycRecord.created_at * 1000)
     const year = date.getUTCFullYear()
     const month = String(date.getUTCMonth() + 1).padStart(2, '0')
@@ -49,7 +65,7 @@ export const lambdaHandler = async (
     const ext = CONTENT_TYPE_TO_EXT[body.contentType]
     const s3Key = `onboarding/${year}/${month}/${day}/${kycRecord.creditId}/${currentStep}.${ext}`
 
-    const uploadUrl = await generateUploadUrl(S3_BUCKET_NAME, s3Key, body.contentType)
+    const uploadUrl = await generateUploadUrl(S3_BUCKET_NAME, s3Key, body.contentType, body.fileSize)
 
     await saveS3Key(kycRecord.creditId, s3Key, KYC_TABLE_NAME)
 

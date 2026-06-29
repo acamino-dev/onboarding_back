@@ -6,13 +6,15 @@ const s3Client = new S3Client({})
 export const generateUploadUrl = async (
   bucketName: string,
   s3Key: string,
-  contentType: string
+  contentType: string,
+  contentLength: number
 ): Promise<string> => {
   try {
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: s3Key,
       ContentType: contentType,
+      ContentLength: contentLength,
     })
 
     return await getSignedUrl(s3Client, command, { expiresIn: 3600 })

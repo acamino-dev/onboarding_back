@@ -6,6 +6,7 @@ const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'application/pdf'] as 
 
 const schema = z.object({
   contentType: z.enum(ALLOWED_CONTENT_TYPES),
+  fileSize: z.number().int().positive(),
 })
 
 export const validateBody = (rawBody: string): RequestBody => {

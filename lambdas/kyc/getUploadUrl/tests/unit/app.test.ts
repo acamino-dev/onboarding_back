@@ -19,14 +19,14 @@ const baseEvent: Partial<APIGatewayProxyEventV2> = {
   requestContext: {
     authorizer: { lambda: { userId: TEST_USER_ID } },
   } as unknown as APIGatewayProxyEventV2['requestContext'],
-  body: JSON.stringify({ contentType: 'image/jpeg' }),
+  body: JSON.stringify({ contentType: 'image/jpeg', fileSize: 1000000 }),
 }
 
 const noAuthEvent: Partial<APIGatewayProxyEventV2> = {
   requestContext: {
     authorizer: { lambda: {} },
   } as unknown as APIGatewayProxyEventV2['requestContext'],
-  body: JSON.stringify({ contentType: 'image/jpeg' }),
+  body: JSON.stringify({ contentType: 'image/jpeg', fileSize: 1000000 }),
 }
 
 const kycRecord = {
@@ -79,7 +79,16 @@ describe('getUploadUrl', () => {
   })
 
   it('should return 400 with errorCode 702 when contentType is missing', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({}) }
+    const event = { ...baseEvent, body: JSON.stringify({ fileSize: 1000000 }) }
+    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 702 when fileSize is missing', async () => {
+    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'image/jpeg' }) }
     const result = await lambdaHandler(event as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -88,7 +97,26 @@ describe('getUploadUrl', () => {
   })
 
   it('should return 400 with errorCode 702 when contentType is not allowed', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'video/mp4' }) }
+    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'video/mp4', fileSize: 1000000 }) }
+    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 702 when fileSize exceeds 5MB limit for INE_FRONT', async () => {
+    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'image/jpeg', fileSize: 6 * 1024 * 1024 }) }
+    const result = await lambdaHandler(event as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 702 when fileSize exceeds 15MB limit for ADDRESS step', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'ADDRESS' })
+    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'application/pdf', fileSize: 16 * 1024 * 1024 }) }
     const result = await lambdaHandler(event as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

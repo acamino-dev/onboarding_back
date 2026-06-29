@@ -8,7 +8,7 @@ import {
 import { analyzeAddressDocument } from '../../services/analyzeAddressDocument'
 
 const BUCKET = 'acamino-file-system-dev'
-const KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/ADDRESS.pdf'
+const KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/ADDRESS.jpeg'
 
 const pad = (s: string, n: number): string => s.slice(0, n).padEnd(n)
 
