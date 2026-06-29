@@ -16,7 +16,7 @@ capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
 region = "us-east-1"
-parameter_overrides = "Environment=Dev LambdaSubnetIds=subnet-0b0abc2587fd5eb54 LambdaSecurityGroupIds=sg-02460aaaf2d9e95a0"
+parameter_overrides = "Environment=Dev LambdaSubnetIds=subnet-0b0abc2587fd5eb54 LambdaSecurityGroupIds=sg-02460aaaf2d9e95a0, FrontendUrl=https://devcredito.apoyoenelcamino.com.mx"
 
 [prod]
 [prod.global.parameters]
