@@ -52,6 +52,61 @@ const getTextForBlock = (block: Block, blockMap: Map<string, Block>): string => 
     .join(' ')
 }
 
+const WATER_BILL_PATTERN =
+  /\b(AGUA POTABLE|AGUA Y DRENAJE|AGUA Y SANEAMIENTO|SERVICIO DE AGUA|SISTEMA DE AGUA|SACMEX|SIAPA|OOAPAS|JAPAC|JUMAPA|CMAS|SAPAL|AGUAKAN|SIMAS|CAEM)\b/
+const ELECTRICITY_BILL_PATTERN =
+  /\bCFE\b|\b(KWH|COMISION FEDERAL DE ELECTRICIDAD|COMISIÓN FEDERAL DE ELECTRICIDAD|ENERGIA ELECTRICA|ENERGÍA ELÉCTRICA)\b/
+const BANK_STATEMENT_PATTERN =
+  /\b(ESTADO DE CUENTA|SALDO INICIAL|SALDO FINAL|NUMERO DE CUENTA|NÚMERO DE CUENTA)\b/
+
+const isValidDocumentType = (text: string): boolean =>
+  WATER_BILL_PATTERN.test(text) ||
+  ELECTRICITY_BILL_PATTERN.test(text) ||
+  BANK_STATEMENT_PATTERN.test(text)
+
+const MONTH_MAP: Record<string, number> = {
+  ENERO: 0, FEBRERO: 1, MARZO: 2, ABRIL: 3, MAYO: 4, JUNIO: 5,
+  JULIO: 6, AGOSTO: 7, SEPTIEMBRE: 8, OCTUBRE: 9, NOVIEMBRE: 10, DICIEMBRE: 11,
+}
+
+const FULL_DATE_PATTERN =
+  /\b(\d{1,2})\s+DE\s+(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\s+(?:DE\s+)?(\d{4})\b/
+const MONTH_YEAR_PATTERN =
+  /\b(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\s+(?:DE\s+)?(\d{4})\b/
+const NUMERIC_DATE_PATTERN = /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/
+
+const extractDocumentDate = (text: string): Date | undefined => {
+  const fullMatch = FULL_DATE_PATTERN.exec(text)
+  if (fullMatch) {
+    return new Date(parseInt(fullMatch[3], 10), MONTH_MAP[fullMatch[2]], parseInt(fullMatch[1], 10))
+  }
+
+  const monthYearMatch = MONTH_YEAR_PATTERN.exec(text)
+  if (monthYearMatch) {
+    const year = parseInt(monthYearMatch[2], 10)
+    const month = MONTH_MAP[monthYearMatch[1]]
+    return new Date(year, month + 1, 0) // last day of month — lenient
+  }
+
+  const numericMatch = NUMERIC_DATE_PATTERN.exec(text)
+  if (numericMatch) {
+    const day = parseInt(numericMatch[1], 10)
+    const month = parseInt(numericMatch[2], 10) - 1
+    const year = parseInt(numericMatch[3], 10)
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31 && year >= 2000) {
+      return new Date(year, month, day)
+    }
+  }
+
+  return undefined
+}
+
+const isDocumentRecent = (date: Date): boolean => {
+  const now = new Date()
+  const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate())
+  return date >= threeMonthsAgo
+}
+
 const CP_PATTERN = /\b\d{5}\b/
 const STREET_PATTERN = /\b(CALLE|AV\.?|AVENIDA|BLVD\.?|BOULEVARD|PRIV\.?|PRIVADA|CALZ\.?|CALZADA|CARR\.?|CARRETERA|AND\.?|ANDADOR)\b/
 const COLONY_PATTERN = /\b(COL\.?|COLONIA|FRACC\.?|FRACCIONAMIENTO|UNIDAD|RESIDENCIAL|BARRIO|SECC\.?)\b/
@@ -139,6 +194,22 @@ export const analyzeAddressDocument = async (bucket: string, key: string): Promi
       .filter((b: Block) => b.BlockType === 'LINE')
       .map((b: Block) => b.Text?.toUpperCase().trim() ?? '')
       .filter((t) => t.length > 0)
+
+    const fullText = lineTexts.join(' ')
+
+    if (!isValidDocumentType(fullText)) {
+      throw new ValidationError(
+        'Invalid document type: must be a water bill, electricity bill, or bank statement'
+      )
+    }
+
+    const documentDate = extractDocumentDate(fullText)
+    if (!documentDate) {
+      throw new ValidationError('Document date not found')
+    }
+    if (!isDocumentRecent(documentDate)) {
+      throw new ValidationError('Document is older than 3 months')
+    }
 
     const address =
       extractAddressByPostalCode(lineTexts) ??

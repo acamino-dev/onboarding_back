@@ -114,6 +114,38 @@ describe('validateAddress', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
+  it('should return 400 with errorCode 702 when document type is not water bill, electricity bill, or bank statement', async () => {
+    const { ValidationError } = await import('../../../../../shared/constants/errors')
+    mockAnalyzeAddressDocument.mockRejectedValue(
+      new ValidationError('Invalid document type: must be a water bill, electricity bill, or bank statement')
+    )
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 702 when document date is not found', async () => {
+    const { ValidationError } = await import('../../../../../shared/constants/errors')
+    mockAnalyzeAddressDocument.mockRejectedValue(new ValidationError('Document date not found'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
+  it('should return 400 with errorCode 702 when document is older than 3 months', async () => {
+    const { ValidationError } = await import('../../../../../shared/constants/errors')
+    mockAnalyzeAddressDocument.mockRejectedValue(new ValidationError('Document is older than 3 months'))
+    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
+    expect(result.statusCode).toBe(400)
+    const parsed = JSON.parse(result.body as string)
+    expect(parsed.errorCode).toBe(702)
+    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
+  })
+
   it('should return 400 with errorCode 702 when addresses do not match', async () => {
     mockAnalyzeAddressDocument.mockResolvedValue('AV REFORMA 500 COL JUAREZ CDMX')
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)

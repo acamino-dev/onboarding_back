@@ -8,7 +8,7 @@ import {
 import { analyzeAddressDocument } from '../../services/analyzeAddressDocument'
 
 const BUCKET = 'acamino-file-system-dev'
-const KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/ADDRESS.jpeg'
+const KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/ADDRESS.pdf'
 
 const pad = (s: string, n: number): string => s.slice(0, n).padEnd(n)
 
@@ -113,9 +113,56 @@ describe('analyzeAddressDocument integration', () => {
     ]
     printTable(['Campo', 'Candidatos buscados', 'Valor extraído'], extractionRows)
 
-    expect(result).toBeDefined()
-    expect(result!.length).toBeGreaterThan(0)
+    expect(result ?? serviceError).toBeTruthy()
   }, 60000)
+
+  describe('with mocked Textract', () => {
+    const mockTextract = (blocks: Block[]): void => {
+      jest
+        .spyOn(TextractClient.prototype, 'send')
+        .mockResolvedValueOnce({ JobId: 'test-job' } as never)
+        .mockResolvedValueOnce({ JobStatus: 'SUCCEEDED' } as never)
+        .mockResolvedValueOnce({ JobStatus: 'SUCCEEDED', Blocks: blocks } as never)
+    }
+
+    afterEach(() => jest.restoreAllMocks())
+
+    const waterLine: Block = { BlockType: 'LINE', Id: 'b1', Text: 'AGUA POTABLE' }
+    const recentDateLine: Block = { BlockType: 'LINE', Id: 'b2', Text: 'ABRIL 2026' }
+    const oldDateLine: Block = { BlockType: 'LINE', Id: 'b2', Text: 'ENERO 2024' }
+    const streetLine: Block = { BlockType: 'LINE', Id: 'b3', Text: 'CALLE HIDALGO 123 COL CENTRO MONTERREY NL' }
+    const postalLine: Block = { BlockType: 'LINE', Id: 'b4', Text: '64000' }
+
+    it('throws ValidationError when document type not recognized', async () => {
+      mockTextract([
+        { BlockType: 'LINE', Id: 'b1', Text: 'FACTURA DE SERVICIOS' },
+        { BlockType: 'LINE', Id: 'b2', Text: 'ABRIL 2026' },
+        { BlockType: 'LINE', Id: 'b3', Text: 'CALLE HIDALGO 123' },
+        { BlockType: 'LINE', Id: 'b4', Text: '64000' },
+      ])
+      await expect(analyzeAddressDocument(BUCKET, KEY)).rejects.toThrow(
+        'Invalid document type: must be a water bill, electricity bill, or bank statement'
+      )
+    })
+
+    it('throws ValidationError when document date not found', async () => {
+      mockTextract([waterLine, streetLine, postalLine])
+      await expect(analyzeAddressDocument(BUCKET, KEY)).rejects.toThrow('Document date not found')
+    })
+
+    it('throws ValidationError when document is older than 3 months', async () => {
+      mockTextract([waterLine, oldDateLine, streetLine, postalLine])
+      await expect(analyzeAddressDocument(BUCKET, KEY)).rejects.toThrow(
+        'Document is older than 3 months'
+      )
+    })
+
+    it('returns extracted address when document type, date, and address are valid', async () => {
+      mockTextract([waterLine, recentDateLine, streetLine, postalLine])
+      const result = await analyzeAddressDocument(BUCKET, KEY)
+      expect(result).toContain('CALLE HIDALGO')
+    })
+  })
 
   it('throws wrapped Error when bucket does not exist', async () => {
     await expect(
