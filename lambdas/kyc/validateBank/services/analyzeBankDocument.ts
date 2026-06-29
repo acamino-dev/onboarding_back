@@ -53,16 +53,17 @@ const getTextForBlock = (block: Block, blockMap: Map<string, Block>): string => 
     .join(' ')
 }
 
-const findField = (kvPairs: Record<string, string>, candidates: string[]): string | undefined => {
-  for (const candidate of candidates) {
-    const entry = Object.entries(kvPairs).find(([k]) => k.includes(candidate))
-    if (entry) return entry[1]
-  }
-  return undefined
+const rfcPresentInDocument = (blocks: Block[], rfcBase: string): boolean => {
+  const rfcRegex = new RegExp(rfcBase + '[A-Z\\d]{0,3}', 'i')
+  const allText = blocks
+    .filter((b) => b.BlockType === 'LINE')
+    .map((b) => b.Text ?? '')
+    .join('\n')
+  return rfcRegex.test(allText)
 }
 
-const ACCOUNT_NUMBER_REGEX = /\b\d{10,20}\b/
-
+// Extract CLABE (18 digits) or account number from lines near CUENTA/CLABE keywords.
+// Strips spaces/separators so "012 180 01521329126 6" → "012180015213291266".
 const extractAccountFromLines = (blocks: Block[]): string | undefined => {
   const lines = blocks
     .filter((b: Block) => b.BlockType === 'LINE')
@@ -71,75 +72,37 @@ const extractAccountFromLines = (blocks: Block[]): string | undefined => {
 
   for (let i = 0; i < lines.length; i++) {
     const upper = lines[i].toUpperCase()
-    if (upper.includes('CUENTA') || upper.includes('CLABE') || upper.includes('NO.') || upper.includes('NÚMERO')) {
+    if (upper.includes('CLABE') || upper.includes('CUENTA') || upper.includes('NO.') || upper.includes('NÚMERO')) {
       const combined = lines.slice(i, i + 3).join(' ')
-      const match = ACCOUNT_NUMBER_REGEX.exec(combined)
-      if (match) return match[0]
+      const digits = combined.replace(/\D/g, '')
+      if (digits.length === 18) return digits
+      if (digits.length >= 10 && digits.length <= 17) return digits
     }
   }
 
+  // Last resort: first 18-digit sequence in the whole document
   for (const line of lines) {
-    const match = ACCOUNT_NUMBER_REGEX.exec(line)
-    if (match) return match[0]
+    const digits = line.replace(/\D/g, '')
+    if (digits.length === 18) return digits
   }
 
   return undefined
 }
 
-const NAME_STOP_PATTERNS = [
-  /^DOMICILIO/,
-  /^DIRECCI[OÓ]N/,
-  /^RFC/,
-  /^CUENTA/,
-  /^CLABE/,
-  /^SUCURSAL/,
-  /^FECHA/,
-  /^SALDO/,
-  /^PERIODO/,
-]
-
-const NAME_SKIP_PATTERNS = [
-  /^TITULAR/,
-  /^NOMBRE DEL CLIENTE/,
-  /^NOMBRE:/,
-]
-
-const extractNameFromLines = (blocks: Block[]): string | undefined => {
-  const lines = blocks
-    .filter((b: Block) => b.BlockType === 'LINE')
-    .map((b: Block) => b.Text?.toUpperCase().trim() ?? '')
-    .filter((t) => t.length > 0)
-
-  const markerIdx = lines.findIndex(
-    (t) =>
-      t === 'NOMBRE' ||
-      t === 'TITULAR' ||
-      t === 'NOMBRE DEL CLIENTE' ||
-      t.startsWith('NOMBRE:') ||
-      t.startsWith('TITULAR:')
-  )
-
-  if (markerIdx !== -1) {
-    const nameParts: string[] = []
-    const markerLine = lines[markerIdx]
-    const inline = markerLine.replace(/^(NOMBRE|TITULAR|NOMBRE DEL CLIENTE|NOMBRE:|TITULAR:)\s*/i, '').trim()
-    if (inline && /^[A-ZÁÉÍÓÚÜÑ\s]{3,}$/.test(inline)) nameParts.push(inline)
-
-    for (let i = markerIdx + 1; i < lines.length; i++) {
-      const line = lines[i]
-      if (NAME_STOP_PATTERNS.some((p) => p.test(line))) break
-      if (NAME_SKIP_PATTERNS.some((p) => p.test(line))) continue
-      if (/^[A-ZÁÉÍÓÚÜÑ\s]{3,}$/.test(line)) nameParts.push(line)
-      if (nameParts.length >= 2) break
-    }
-
-    if (nameParts.length > 0) return nameParts.join(' ')
+const extractAccountFromKv = (kvPairs: Record<string, string>): string | undefined => {
+  const candidates = ['CLABE', 'CUENTA', 'NÚMERO DE CUENTA', 'NUMERO DE CUENTA', 'NO. DE CUENTA']
+  for (const candidate of candidates) {
+    const entry = Object.entries(kvPairs).find(([k]) => k.includes(candidate))
+    if (entry) return entry[1].replace(/\D/g, '') || undefined
   }
-
   return undefined
 }
 
-export const analyzeBankDocument = async (bucket: string, key: string): Promise<BankData> => {
+export const analyzeBankDocument = async (
+  bucket: string,
+  key: string,
+  rfcBase: string
+): Promise<BankData> => {
   try {
     const blocks = await startAndPollAnalysis(bucket, key)
     const blockMap = new Map<string, Block>(blocks.map((b: Block) => [b.Id ?? '', b]))
@@ -160,21 +123,17 @@ export const analyzeBankDocument = async (bucket: string, key: string): Promise<
       kvPairs[keyText] = getTextForBlock(valueBlock, blockMap).trim()
     }
 
-    const nombre =
-      findField(kvPairs, ['NOMBRE', 'TITULAR', 'NOMBRE DEL CLIENTE']) ??
-      extractNameFromLines(blocks)
-
-    const numeroCuenta =
-      findField(kvPairs, ['CUENTA', 'CLABE', 'NÚMERO DE CUENTA', 'NUMERO DE CUENTA', 'NO. DE CUENTA']) ??
-      extractAccountFromLines(blocks)
-
-    const missingFields = [!nombre && 'nombre', !numeroCuenta && 'numeroCuenta'].filter(Boolean)
-
-    if (missingFields.length > 0) {
-      throw new ValidationError(`Missing required bank fields: ${missingFields.join(', ')}`)
+    if (!rfcPresentInDocument(blocks, rfcBase)) {
+      throw new ValidationError('RFC not found in bank statement')
     }
 
-    return { nombre: nombre!, numeroCuenta: numeroCuenta! }
+    const numeroCuenta = extractAccountFromKv(kvPairs) ?? extractAccountFromLines(blocks)
+
+    if (!numeroCuenta) {
+      throw new ValidationError('Missing required bank fields: numeroCuenta')
+    }
+
+    return { numeroCuenta }
   } catch (error) {
     if (error instanceof ValidationError) throw error
     throw new Error(

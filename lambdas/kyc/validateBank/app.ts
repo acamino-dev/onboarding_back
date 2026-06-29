@@ -6,7 +6,6 @@ import { handleError } from '../../../shared/utils/handleError'
 import { analyzeBankDocument } from './services/analyzeBankDocument'
 import { getKycByUserId } from './services/getKycByUserId'
 import { updateKycWithBankData } from './services/updateKycWithBankData'
-import { normalizeNameForComparison } from './utils/nameNormalizer'
 
 export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
@@ -36,18 +35,11 @@ export const lambdaHandler = async (
       throw new ValidationError('Bank statement has not been uploaded')
     }
 
-    if (!kycRecord.fullName) {
-      throw new ValidationError('KYC record missing fullName from INE front validation')
+    if (!kycRecord.rfc) {
+      throw new ValidationError('KYC record missing RFC from INE front validation')
     }
 
-    const bankData = await analyzeBankDocument(S3_BUCKET_NAME, bankS3Key)
-
-    const normalizedExtracted = normalizeNameForComparison(bankData.nombre)
-    const normalizedKyc = normalizeNameForComparison(kycRecord.fullName)
-
-    if (normalizedExtracted !== normalizedKyc) {
-      throw new ValidationError('Name mismatch: bank statement name does not match KYC record')
-    }
+    const bankData = await analyzeBankDocument(S3_BUCKET_NAME, bankS3Key, kycRecord.rfc.slice(0, 10))
 
     await updateKycWithBankData(kycRecord.creditId, bankData.numeroCuenta, KYC_TABLE_NAME)
 

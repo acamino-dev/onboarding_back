@@ -6,7 +6,7 @@ info:
 paths:
   /kyc/validate-bank:
     post:
-      summary: Validate bank statement - extract name and account number, verify name matches KYC record, advance step to OTP
+      summary: Validate bank statement - verify RFC presence in document, extract CLABE/account number, advance step to OTP
       responses:
         "200":
           description: Bank statement validated successfully
@@ -40,7 +40,7 @@ components:
           type: integer
           description: |
             Internal error code:
-            702 – validation error (missing s3Key, missing fullName, Textract extraction failed, name mismatch)
+            702 – validation error (missing s3Key, missing RFC in KYC record, RFC not found in bank statement, account number not extractable)
             703 – auth error (missing userId)
             704 – forbidden (wrong KYC step)
             705 – not found (KYC record not found)

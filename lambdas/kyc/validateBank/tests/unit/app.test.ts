@@ -25,6 +25,7 @@ const mockKycRecord = {
   step: 'BANK',
   s3Keys: { BANK: 'onboarding/2025/06/28/credit-xyz-456/BANK.jpg' },
   fullName: 'GARCIA LOPEZ JUAN CARLOS',
+  rfc: 'GALJ970312ABC',
   amount: 10000,
   term: 12,
   created_at: 1750000000,
@@ -32,7 +33,6 @@ const mockKycRecord = {
 }
 
 const mockBankData = {
-  nombre: 'GARCIA LOPEZ JUAN CARLOS',
   numeroCuenta: '012345678901234567',
 }
 
@@ -47,16 +47,7 @@ describe('validateBank', () => {
     mockUpdateKycWithBankData.mockResolvedValue(undefined)
   })
 
-  it('should return 200 with errorCode 701 when bank statement is valid and name matches', async () => {
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(200)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(701)
-  })
-
-  it('should return 200 with errorCode 701 when name matches after accent normalization', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, fullName: 'GARCÍA LÓPEZ JUAN CARLOS' })
-    mockAnalyzeBankDocument.mockResolvedValue({ ...mockBankData, nombre: 'GARCIA LOPEZ JUAN CARLOS' })
+  it('should return 200 with errorCode 701 when bank statement is valid', async () => {
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(200)
     const parsed = JSON.parse(result.body as string)
@@ -101,8 +92,8 @@ describe('validateBank', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when fullName is missing in KYC record', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, fullName: undefined })
+  it('should return 400 with errorCode 702 when RFC is missing in KYC record', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...mockKycRecord, rfc: undefined })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -110,9 +101,9 @@ describe('validateBank', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when Textract cannot extract bank data', async () => {
+  it('should return 400 with errorCode 702 when RFC not found in bank statement', async () => {
     const { ValidationError } = await import('../../../../../shared/constants/errors')
-    mockAnalyzeBankDocument.mockRejectedValue(new ValidationError('Missing required bank fields: nombre'))
+    mockAnalyzeBankDocument.mockRejectedValue(new ValidationError('RFC not found in bank statement'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
@@ -120,8 +111,9 @@ describe('validateBank', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when extracted name does not match fullName', async () => {
-    mockAnalyzeBankDocument.mockResolvedValue({ ...mockBankData, nombre: 'PEREZ RAMIREZ OTRO NOMBRE' })
+  it('should return 400 with errorCode 702 when account number cannot be extracted', async () => {
+    const { ValidationError } = await import('../../../../../shared/constants/errors')
+    mockAnalyzeBankDocument.mockRejectedValue(new ValidationError('Missing required bank fields: numeroCuenta'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

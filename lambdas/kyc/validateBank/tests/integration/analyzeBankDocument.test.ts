@@ -1,18 +1,118 @@
+import {
+  StartDocumentAnalysisCommand,
+  GetDocumentAnalysisCommand,
+  TextractClient,
+  type Block,
+  type Relationship,
+} from '@aws-sdk/client-textract'
 import { analyzeBankDocument } from '../../services/analyzeBankDocument'
 
-const BUCKET = process.env.S3_BUCKET_NAME as string
+const BUCKET = 'acamino-file-system-dev'
 const BANK_KEY = 'onboarding/2026/06/28/1b187669-a0a0-4f2a-9fff-cf64530ac093/BANK.pdf'
+const RFC_BASE = 'GOGE970207'
+
+const pad = (s: string, n: number): string => s.slice(0, n).padEnd(n)
+
+const printTable = (headers: string[], rows: string[][]): void => {
+  const widths = headers.map((h, i) =>
+    Math.max(h.length, ...rows.map((r) => (r[i] ?? '').length))
+  )
+  const divider = `+${widths.map((w) => '-'.repeat(w + 2)).join('+')}+`
+  const fmt = (cells: string[]): string =>
+    `|${cells.map((c, i) => ` ${pad(c ?? '', widths[i])} `).join('|')}|`
+  const lines = [divider, fmt(headers), divider, ...rows.map(fmt), divider]
+  console.log(lines.join('\n'))
+}
 
 describe('analyzeBankDocument integration', () => {
-  it('extracts nombre and numeroCuenta from real bank statement', async () => {
-    const result = await analyzeBankDocument(BUCKET, BANK_KEY)
+  it('prints Textract blocks and service validation as tables', async () => {
+    const client = new TextractClient({})
 
-    expect(typeof result.nombre).toBe('string')
-    expect(result.nombre.length).toBeGreaterThan(0)
+    const { JobId } = await client.send(
+      new StartDocumentAnalysisCommand({
+        DocumentLocation: { S3Object: { Bucket: BUCKET, Name: BANK_KEY } },
+        FeatureTypes: ['FORMS'],
+      })
+    )
+    if (!JobId) throw new Error('Textract did not return a JobId')
 
-    expect(typeof result.numeroCuenta).toBe('string')
-    expect(result.numeroCuenta.length).toBeGreaterThan(0)
+    while (true) {
+      const status = await client.send(new GetDocumentAnalysisCommand({ JobId }))
+      if (status.JobStatus === 'FAILED') throw new Error(`Textract job failed: ${status.StatusMessage ?? 'unknown'}`)
+      if (status.JobStatus === 'SUCCEEDED') break
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
 
-    console.log('Extracted bank data:', result)
-  })
+    const allBlocks: Block[] = []
+    let nextToken: string | undefined
+    do {
+      const page = await client.send(new GetDocumentAnalysisCommand({ JobId, NextToken: nextToken }))
+      allBlocks.push(...(page.Blocks ?? []))
+      nextToken = page.NextToken
+    } while (nextToken)
+
+    const blockMap = new Map<string, Block>(allBlocks.map((b) => [b.Id ?? '', b]))
+
+    const getChildText = (block: Block): string =>
+      (block.Relationships as Relationship[] | undefined)
+        ?.filter((r) => r.Type === 'CHILD')
+        .flatMap((r) => r.Ids ?? [])
+        .map((id) => blockMap.get(id))
+        .filter((b): b is Block => b?.BlockType === 'WORD')
+        .map((b) => b.Text ?? '')
+        .join(' ') ?? ''
+
+    // ── Tabla 1: LINE blocks ──────────────────────────────────────────────
+    console.log('\nLINE BLOCKS')
+    const lineRows = allBlocks
+      .filter((b) => b.BlockType === 'LINE')
+      .map((b) => {
+        const words =
+          (b.Relationships as Relationship[] | undefined)
+            ?.filter((r) => r.Type === 'CHILD')
+            .flatMap((r) => r.Ids ?? [])
+            .map((id) => blockMap.get(id))
+            .filter((w): w is Block => w?.BlockType === 'WORD')
+            .map((w) => `${w.Text}(${w.Confidence?.toFixed(0)}%)`)
+            .join('  ') ?? ''
+        return [b.Text ?? '', `${b.Confidence?.toFixed(1)}%`, words]
+      })
+    printTable(['Texto línea', 'Conf%', 'Palabras (word, confianza)'], lineRows)
+
+    // ── Tabla 2: KV pairs ────────────────────────────────────────────────
+    console.log('\nKEY-VALUE PAIRS')
+    const kvRows: string[][] = []
+    for (const block of allBlocks) {
+      if (block.BlockType !== 'KEY_VALUE_SET' || !block.EntityTypes?.includes('KEY')) continue
+      const keyText = getChildText(block).toUpperCase().trim()
+      const valueBlockId = (block.Relationships as Relationship[])?.find(
+        (r) => r.Type === 'VALUE'
+      )?.Ids?.[0]
+      const valueBlock = valueBlockId ? blockMap.get(valueBlockId) : undefined
+      const valueText = valueBlock ? getChildText(valueBlock).trim() : ''
+      const keyConf = block.Confidence?.toFixed(1) ?? '-'
+      const valConf = valueBlock?.Confidence?.toFixed(1) ?? '-'
+      kvRows.push([keyText, `${keyConf}%`, valueText, `${valConf}%`])
+    }
+    printTable(['KEY', 'Conf%', 'VALUE', 'Conf%'], kvRows)
+
+    // ── Tabla 3: validación del servicio ─────────────────────────────────
+    console.log('\nVALIDACIÓN DEL SERVICIO')
+    let result: Awaited<ReturnType<typeof analyzeBankDocument>> | undefined
+    let serviceError = ''
+    try {
+      result = await analyzeBankDocument(BUCKET, BANK_KEY, RFC_BASE)
+    } catch (e) {
+      serviceError = e instanceof Error ? e.message : String(e)
+    }
+
+    const validationRows = [
+      ['rfc', `Busca RFC_BASE="${RFC_BASE}" en documento`, serviceError ? `ERROR: ${serviceError}` : 'FOUND'],
+      ['numeroCuenta', 'CLABE (18 dígitos) / CUENTA / NO. DE CUENTA', result?.numeroCuenta ?? `ERROR: ${serviceError}`],
+    ]
+    printTable(['Campo', 'Candidatos buscados', 'Valor extraído'], validationRows)
+
+    expect(result).toBeDefined()
+    expect(result?.numeroCuenta.length).toBeGreaterThan(0)
+  }, 120000)
 })

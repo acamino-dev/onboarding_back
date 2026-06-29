@@ -4,6 +4,7 @@ export type KycRecord = {
   step: string
   s3Keys?: Partial<Record<string, string>>
   fullName?: string
+  rfc?: string
   amount: number
   term: number
   created_at: number
