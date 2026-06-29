@@ -12,9 +12,6 @@ export const lambdaHandler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyStructuredResultV2> => {
   try {
-    const DB_SECRET_ID = process.env.DB_SECRET_ID
-    if (!DB_SECRET_ID) throw new Error('DB_SECRET_ID is not set')
-
     const KYC_TABLE_NAME = process.env.KYC_TABLE_NAME
     if (!KYC_TABLE_NAME) throw new Error('KYC_TABLE_NAME is not set')
 
