@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: verifyOTP
+  version: 1.0.0
+
+paths:
+  /kyc/verify-otp:
+    post:
+      summary: Validates 4-digit SMS OTP for the active KYC process and advances step to REVIEW
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: 4-digit numeric OTP received via SMS
+          pattern: '^\d{4}$'
+          example: '4829'
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OTP verified
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (missing or malformed body)
+            703 – auth error (missing auth context or invalid/expired OTP)
+            704 – forbidden (KYC step is not OTP)
+            705 – not found (no active KYC process for this user)
+            708 – generic server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'

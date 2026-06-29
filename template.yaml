@@ -1189,6 +1189,58 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  KycVerifyOTPFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingKycVerifyOTP${Environment}
+      CodeUri: ./
+      Handler: lambdas/kyc/verifyOTP/app.lambdaHandler
+      Description: POST /kyc/verify-otp - validates 4-digit SMS OTP and advances KYC step to REVIEW
+      Environment:
+        Variables:
+          KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
+          OTP_TABLE_NAME: !Sub onboardingOtpDB${Environment}
+          DEV_USER_ID: !Ref DevUserId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt KycTable.Arn
+                - !Sub '${KycTable.Arn}/index/userId-index'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt KycTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt OtpTable.Arn
+        - VPCAccessPolicy: {}
+      Events:
+        KycVerifyOTP:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /kyc/verify-otp
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/kyc/verifyOTP/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
