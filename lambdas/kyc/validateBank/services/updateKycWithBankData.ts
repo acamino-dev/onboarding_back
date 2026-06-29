@@ -10,12 +10,12 @@ export const updateKycWithBankData = async (
     await dynamoDb.update({
       TableName: tableName,
       Key: { creditId },
-      UpdateExpression: 'SET #step = :step, accountNumber = :accountNumber',
+      UpdateExpression: 'SET #step = :step, bankAccount = :bankAccount',
       ConditionExpression: 'attribute_exists(creditId)',
       ExpressionAttributeNames: { '#step': 'step' },
       ExpressionAttributeValues: {
         ':step': KYC_STEPS.OTP,
-        ':accountNumber': accountNumber,
+        ':bankAccount': accountNumber,
       },
     })
   } catch (error) {

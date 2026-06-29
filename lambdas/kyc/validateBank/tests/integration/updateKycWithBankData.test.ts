@@ -19,7 +19,7 @@ afterAll(async () => {
 })
 
 describe('updateKycWithBankData integration', () => {
-  it('updates accountNumber and advances step to OTP', async () => {
+  it('updates bankAccount and advances step to OTP', async () => {
     const accountNumber = '012345678901234567'
 
     await updateKycWithBankData(TEST_CREDIT_ID, accountNumber, TABLE_NAME)
@@ -30,7 +30,7 @@ describe('updateKycWithBankData integration', () => {
     })
 
     expect(result.Item?.['step']).toBe('OTP')
-    expect(result.Item?.['accountNumber']).toBe(accountNumber)
+    expect(result.Item?.['bankAccount']).toBe(accountNumber)
   })
 
   it('throws wrapped Error when creditId does not exist', async () => {

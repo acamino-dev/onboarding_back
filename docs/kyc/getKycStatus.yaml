@@ -63,19 +63,10 @@ components:
         address:
           type: string
           nullable: true
-        neighborhood:
+        bankAccount:
           type: string
           nullable: true
-        city:
-          type: string
-          nullable: true
-        postalCode:
-          type: string
-          nullable: true
-        accountLast4:
-          type: string
-          nullable: true
-          description: Last 4 digits of linked bank account
+          description: CLABE or account number saved after bank statement validation
 
     SuccessResponse:
       type: object

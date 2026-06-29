@@ -10,8 +10,5 @@ export type KycProcess = {
   rfc: string | null
   birthDate: string | null
   address: string | null
-  neighborhood: string | null
-  city: string | null
-  postalCode: string | null
-  accountLast4: string | null
+  bankAccount: string | null
 }

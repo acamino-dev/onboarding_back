@@ -32,10 +32,7 @@ const kycData = {
   rfc: null,
   birthDate: null,
   address: null,
-  neighborhood: null,
-  city: null,
-  postalCode: null,
-  accountLast4: null,
+  bankAccount: null,
 }
 
 describe('getKycStatus', () => {

@@ -33,6 +33,7 @@ describe('findKycProcess integration', () => {
     expect(result?.rfc).toBeNull()
     expect(result?.birthDate).toBeNull()
     expect(result?.address).toBeNull()
+    expect(result?.bankAccount).toBeNull()
   })
 
   it('returns null when userId has no KYC process', async () => {
