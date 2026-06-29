@@ -33,6 +33,7 @@ components:
       type: object
       required:
         - contentType
+        - fileSize
       properties:
         contentType:
           type: string
@@ -40,6 +41,13 @@ components:
             - image/jpeg
             - image/png
             - application/pdf
+        fileSize:
+          type: integer
+          description: |
+            File size in bytes. Per-step limits enforced server-side:
+            - INE_FRONT / INE_BACK: 5 MB (5242880 bytes)
+            - ADDRESS / CURP / BANK: 15 MB (15728640 bytes)
+          minimum: 1
 
     SuccessResponse:
       type: object
@@ -73,7 +81,7 @@ components:
           type: integer
           description: |
             Internal error code:
-            702 – validation error (invalid or missing contentType)
+            702 – validation error (missing/invalid contentType, missing/non-positive fileSize, or file exceeds step size limit)
             703 – unauthorized (missing auth context)
             704 – forbidden (current step does not require a document upload)
             705 – not found (no active KYC process for this user)
