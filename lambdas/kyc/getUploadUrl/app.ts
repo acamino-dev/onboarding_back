@@ -11,8 +11,8 @@ const UPLOADABLE_STEPS = new Set(['INE_FRONT', 'INE_BACK', 'ADDRESS', 'CURP', 'B
 
 const MB = 1024 * 1024
 const STEP_SIZE_LIMIT: Record<string, number> = {
-  INE_FRONT: 5 * MB,
-  INE_BACK: 5 * MB,
+  INE_FRONT: 15 * MB,
+  INE_BACK: 15 * MB,
   ADDRESS: 15 * MB,
   CURP: 15 * MB,
   BANK: 15 * MB,

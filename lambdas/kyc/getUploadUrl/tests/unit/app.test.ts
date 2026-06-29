@@ -105,8 +105,8 @@ describe('getUploadUrl', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 702 when fileSize exceeds 5MB limit for INE_FRONT', async () => {
-    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'image/jpeg', fileSize: 6 * 1024 * 1024 }) }
+  it('should return 400 with errorCode 702 when fileSize exceeds 15MB limit for INE_FRONT', async () => {
+    const event = { ...baseEvent, body: JSON.stringify({ contentType: 'image/jpeg', fileSize: 16 * 1024 * 1024 }) }
     const result = await lambdaHandler(event as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

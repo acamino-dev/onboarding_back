@@ -45,7 +45,7 @@ components:
           type: integer
           description: |
             File size in bytes. Per-step limits enforced server-side:
-            - INE_FRONT / INE_BACK: 5 MB (5242880 bytes)
+            - INE_FRONT / INE_BACK: 15 MB (15728640 bytes)
             - ADDRESS / CURP / BANK: 15 MB (15728640 bytes)
           minimum: 1
 
