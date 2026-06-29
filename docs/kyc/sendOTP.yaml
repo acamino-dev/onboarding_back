@@ -1,0 +1,77 @@
+openapi: 3.0.3
+info:
+  title: kyc/sendOTP
+  version: 1.0.0
+
+paths:
+  /kyc/send-otp:
+    post:
+      summary: Send 4-digit SMS OTP for the authenticated user's active KYC process
+      security:
+        - CredentialsAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        "400":
+          description: Error — check errorCode for the specific failure reason
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    CredentialsAuthorizer:
+      type: http
+      scheme: bearer
+
+  schemas:
+    RequestBody:
+      type: object
+      required:
+        - phoneNumber
+      properties:
+        phoneNumber:
+          type: string
+          description: 10-digit Mexican phone number (no country code)
+          pattern: '^\d{10}$'
+          example: '5512345678'
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OTP sent
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (phoneNumber missing or not 10 digits)
+            703 – auth error (missing JWT / auth context)
+            705 – not found (no active KYC process for this user)
+            707 – too many requests (OTP already sent within last 2 minutes)
+            708 – generic error (DynamoDB or SNS failure)
+          enum: [702, 703, 705, 707, 708]
+        errorId:
+          type: string
+          description: 8-character hex error ID for tracing
+          pattern: '^[0-9a-f]{8}$'
+          example: 'a1b2c3d4'
