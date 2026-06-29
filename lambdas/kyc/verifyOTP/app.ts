@@ -33,9 +33,9 @@ export const lambdaHandler = async (
       throw new ForbiddenError(`Invalid step for OTP verification: ${kycRecord.step}`)
     }
 
-    await verifyAndDeleteOtp(kycRecord.creditId, body.code, OTP_TABLE_NAME)
+    const { phoneNumber } = await verifyAndDeleteOtp(kycRecord.creditId, body.code, OTP_TABLE_NAME)
 
-    await advanceKycToReview(kycRecord.creditId, KYC_TABLE_NAME)
+    await advanceKycToReview(kycRecord.creditId, phoneNumber, KYC_TABLE_NAME)
 
     return createResponsePublic(200, { message: 'OTP verified' })
   } catch (e) {

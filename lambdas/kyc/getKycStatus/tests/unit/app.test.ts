@@ -33,6 +33,7 @@ const kycData = {
   birthDate: null,
   address: null,
   bankAccount: null,
+  phoneNumber: null,
 }
 
 describe('getKycStatus', () => {

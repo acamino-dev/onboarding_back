@@ -1,6 +1,6 @@
 import { dynamoDb } from '../../../../../shared/db/dynamodb'
 import { advanceKycToReview } from '../../services/advanceKycToReview'
-import { TEST_ADVANCE_KYC_RECORD } from './helpers/constants'
+import { TEST_ADVANCE_KYC_RECORD, TEST_PHONE_NUMBER } from './helpers/constants'
 
 const TABLE_NAME = process.env.KYC_TABLE_NAME as string
 const now = Math.floor(Date.now() / 1000)
@@ -24,9 +24,9 @@ afterAll(async () => {
 })
 
 describe('advanceKycToReview integration', () => {
-  it('happy path — updates step to REVIEW', async () => {
+  it('happy path — updates step to REVIEW and saves phoneNumber', async () => {
     await expect(
-      advanceKycToReview(TEST_ADVANCE_KYC_RECORD.creditId, TABLE_NAME)
+      advanceKycToReview(TEST_ADVANCE_KYC_RECORD.creditId, TEST_PHONE_NUMBER, TABLE_NAME)
     ).resolves.toBeUndefined()
 
     const result = await dynamoDb.get({
@@ -34,11 +34,12 @@ describe('advanceKycToReview integration', () => {
       Key: { creditId: TEST_ADVANCE_KYC_RECORD.creditId },
     })
     expect(result.Item?.['step']).toBe('REVIEW')
+    expect(result.Item?.['phoneNumber']).toBe(TEST_PHONE_NUMBER)
   })
 
   it('throws wrapped Error when creditId does not exist', async () => {
     await expect(
-      advanceKycToReview('non-existent-credit-id-xyz', TABLE_NAME)
+      advanceKycToReview('non-existent-credit-id-xyz', TEST_PHONE_NUMBER, TABLE_NAME)
     ).rejects.toThrow(/Error on advanceKycToReview/)
   })
 })

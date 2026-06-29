@@ -18,10 +18,13 @@ export const TEST_ADVANCE_KYC_RECORD = {
   term: 6,
 } as const
 
+export const TEST_PHONE_NUMBER = '5512345678'
+
 export const TEST_OTP = {
   email: TEST_CREDIT_ID,
   otp_id: 'a1b2c3d4-0003-4000-8000-verify-otp-otp',
   code: '7531',
+  phoneNumber: TEST_PHONE_NUMBER,
   used: false,
 } as const
 
@@ -29,5 +32,6 @@ export const TEST_OTP_EXPIRED = {
   email: TEST_CREDIT_ID,
   otp_id: 'a1b2c3d4-0004-4000-8000-verify-otp-exp',
   code: '9999',
+  phoneNumber: TEST_PHONE_NUMBER,
   used: false,
 } as const

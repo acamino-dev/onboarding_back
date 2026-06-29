@@ -29,6 +29,7 @@ export const findKycProcess = async (userId: string, tableName: string): Promise
       birthDate: (item['birthDate'] as string) ?? null,
       address: (item['address'] as string) ?? null,
       bankAccount: (item['bankAccount'] as string) ?? null,
+      phoneNumber: (item['phoneNumber'] as string) ?? null,
     }
   } catch (error) {
     throw new Error(`Error on findKycProcess: ${error instanceof Error ? error.message : String(error)}`)

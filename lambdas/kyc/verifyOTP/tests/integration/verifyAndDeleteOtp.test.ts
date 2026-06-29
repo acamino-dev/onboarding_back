@@ -1,7 +1,7 @@
 import { AuthError } from '../../../../../shared/constants/errors'
 import { dynamoDb } from '../../../../../shared/db/dynamodb'
 import { verifyAndDeleteOtp } from '../../services/verifyAndDeleteOtp'
-import { TEST_CREDIT_ID, TEST_OTP, TEST_OTP_EXPIRED } from './helpers/constants'
+import { TEST_CREDIT_ID, TEST_OTP, TEST_OTP_EXPIRED, TEST_PHONE_NUMBER } from './helpers/constants'
 
 const TABLE_NAME = process.env.OTP_TABLE_NAME as string
 const now = Math.floor(Date.now() / 1000)
@@ -33,10 +33,10 @@ afterAll(async () => {
 })
 
 describe('verifyAndDeleteOtp integration', () => {
-  it('happy path — valid code deletes all OTPs for creditId', async () => {
+  it('happy path — valid code deletes all OTPs and returns phoneNumber', async () => {
     await expect(
       verifyAndDeleteOtp(TEST_CREDIT_ID, TEST_OTP.code, TABLE_NAME)
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ phoneNumber: TEST_PHONE_NUMBER })
 
     const remaining = await dynamoDb.query({
       TableName: TABLE_NAME,

@@ -67,6 +67,10 @@ components:
           type: string
           nullable: true
           description: CLABE or account number saved after bank statement validation
+        phoneNumber:
+          type: string
+          nullable: true
+          description: 10-digit phone number verified via OTP
 
     SuccessResponse:
       type: object

@@ -34,6 +34,7 @@ describe('findKycProcess integration', () => {
     expect(result?.birthDate).toBeNull()
     expect(result?.address).toBeNull()
     expect(result?.bankAccount).toBeNull()
+    expect(result?.phoneNumber).toBeNull()
   })
 
   it('returns null when userId has no KYC process', async () => {

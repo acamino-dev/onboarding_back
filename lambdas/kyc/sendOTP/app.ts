@@ -28,7 +28,7 @@ export const lambdaHandler = async (
 
     const { creditId } = await findActiveKycProcess(userId, KYC_TABLE_NAME)
 
-    const { code } = await createPhoneOtp(creditId, OTP_TABLE_NAME)
+    const { code } = await createPhoneOtp(creditId, body.phoneNumber, OTP_TABLE_NAME)
 
     await sendOtpSms(body.phoneNumber, code)
 

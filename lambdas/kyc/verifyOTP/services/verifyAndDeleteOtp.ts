@@ -5,7 +5,7 @@ export const verifyAndDeleteOtp = async (
   creditId: string,
   code: string,
   tableName: string
-): Promise<void> => {
+): Promise<{ phoneNumber: string }> => {
   try {
     const now = Math.floor(Date.now() / 1000)
 
@@ -29,6 +29,8 @@ export const verifyAndDeleteOtp = async (
       throw new AuthError('Invalid or expired OTP')
     }
 
+    const phoneNumber = valid['phoneNumber'] as string
+
     await Promise.all(
       items.map((item) =>
         dynamoDb.delete({
@@ -37,6 +39,8 @@ export const verifyAndDeleteOtp = async (
         })
       )
     )
+
+    return { phoneNumber }
   } catch (error) {
     if (error instanceof AuthError) throw error
     throw new Error(

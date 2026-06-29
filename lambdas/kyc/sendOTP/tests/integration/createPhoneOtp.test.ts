@@ -1,7 +1,7 @@
 import { RateLimitError } from '../../../../../shared/constants/errors'
 import { dynamoDb } from '../../../../../shared/db/dynamodb'
 import { createPhoneOtp } from '../../services/createPhoneOtp'
-import { OTP_TABLE, TEST_CREDIT_ID } from './helpers/constants'
+import { OTP_TABLE, TEST_CREDIT_ID, TEST_PHONE_NUMBER } from './helpers/constants'
 
 afterEach(async () => {
   const existing = await dynamoDb.query({
@@ -22,8 +22,8 @@ afterEach(async () => {
 })
 
 describe('createPhoneOtp integration', () => {
-  it('creates OTP and returns 4-digit code', async () => {
-    const result = await createPhoneOtp(TEST_CREDIT_ID, OTP_TABLE)
+  it('creates OTP and returns 4-digit code, stores phoneNumber', async () => {
+    const result = await createPhoneOtp(TEST_CREDIT_ID, TEST_PHONE_NUMBER, OTP_TABLE)
     expect(result.code).toMatch(/^\d{4}$/)
 
     const stored = await dynamoDb.query({
@@ -34,10 +34,11 @@ describe('createPhoneOtp integration', () => {
     expect(stored.Items).toHaveLength(1)
     expect(stored.Items![0]['code']).toBe(result.code)
     expect(stored.Items![0]['used']).toBe(false)
+    expect(stored.Items![0]['phoneNumber']).toBe(TEST_PHONE_NUMBER)
   })
 
   it('throws RateLimitError when OTP was created less than 2 minutes ago', async () => {
-    await createPhoneOtp(TEST_CREDIT_ID, OTP_TABLE)
-    await expect(createPhoneOtp(TEST_CREDIT_ID, OTP_TABLE)).rejects.toThrow(RateLimitError)
+    await createPhoneOtp(TEST_CREDIT_ID, TEST_PHONE_NUMBER, OTP_TABLE)
+    await expect(createPhoneOtp(TEST_CREDIT_ID, TEST_PHONE_NUMBER, OTP_TABLE)).rejects.toThrow(RateLimitError)
   })
 })

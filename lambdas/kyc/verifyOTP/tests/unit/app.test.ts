@@ -36,11 +36,10 @@ const kycRecord = {
 describe('verifyOTP', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env.DB_SECRET_ID = 'onboardingCredentialsDev'
     process.env.KYC_TABLE_NAME = 'onboardingKycDBDev'
     process.env.OTP_TABLE_NAME = 'onboardingOtpDBDev'
     mockGetKycByUserId.mockResolvedValue(kycRecord)
-    mockVerifyAndDeleteOtp.mockResolvedValue(undefined)
+    mockVerifyAndDeleteOtp.mockResolvedValue({ phoneNumber: '5512345678' })
     mockAdvanceKycToReview.mockResolvedValue(undefined)
   })
 
@@ -106,15 +105,6 @@ describe('verifyOTP', () => {
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)
     expect(parsed.errorCode).toBe(703)
-    expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('should return 400 with errorCode 708 when DB_SECRET_ID is not set', async () => {
-    delete process.env.DB_SECRET_ID
-    const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
-    expect(result.statusCode).toBe(400)
-    const parsed = JSON.parse(result.body as string)
-    expect(parsed.errorCode).toBe(708)
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 

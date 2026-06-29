@@ -4,6 +4,7 @@ import { dynamoDb } from '../../../../shared/db/dynamodb'
 
 export const createPhoneOtp = async (
   creditId: string,
+  phoneNumber: string,
   tableName: string
 ): Promise<{ code: string }> => {
   try {
@@ -34,6 +35,7 @@ export const createPhoneOtp = async (
         email: creditId,
         otp_id: otpId,
         code,
+        phoneNumber,
         expires_at: expiresAt,
         created_at: now,
         used: false,

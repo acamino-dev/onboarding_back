@@ -11,4 +11,5 @@ export type KycProcess = {
   birthDate: string | null
   address: string | null
   bankAccount: string | null
+  phoneNumber: string | null
 }
