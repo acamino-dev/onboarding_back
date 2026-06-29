@@ -12,17 +12,8 @@ Globals:
     Environment:
       Variables:
         NODE_OPTIONS: --enable-source-maps
-    VpcConfig:
-      SecurityGroupIds: !Split [",", !Ref LambdaSecurityGroupIds]
-      SubnetIds: !Split [",", !Ref LambdaSubnetIds]
 
 Parameters:
-  LambdaSubnetIds:
-    Type: String
-    Description: Comma-separated list of private subnet IDs for Lambda VPC config
-  LambdaSecurityGroupIds:
-    Type: String
-    Description: Comma-separated list of security group IDs for Lambda VPC config
   Environment:
     Type: String
     Description: Deployment environment (Dev, Prod)
@@ -191,7 +182,6 @@ Resources:
                 - dynamodb:Scan
               Resource:
                 - !GetAtt CompaniesTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         Register:
           Type: HttpApi
@@ -230,7 +220,6 @@ Resources:
                 - dynamodb:Scan
               Resource:
                 - !GetAtt CompaniesTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         GetCompanies:
           Type: HttpApi
@@ -283,7 +272,6 @@ Resources:
               Action:
                 - ses:SendEmail
               Resource: "*"
-        - VPCAccessPolicy: {}
       Events:
         SendOTP:
           Type: HttpApi
@@ -335,7 +323,6 @@ Resources:
               Action:
                 - ses:SendEmail
               Resource: "*"
-        - VPCAccessPolicy: {}
       Events:
         SendRecoveryOTP:
           Type: HttpApi
@@ -382,7 +369,6 @@ Resources:
                 - dynamodb:DeleteItem
               Resource:
                 - !GetAtt OtpTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         VerifyOTP:
           Type: HttpApi
@@ -431,7 +417,6 @@ Resources:
                 - dynamodb:PutItem
               Resource:
                 - !GetAtt RefreshTokensTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         Login:
           Type: HttpApi
@@ -476,7 +461,6 @@ Resources:
                 - dynamodb:GetItem
               Resource:
                 - !GetAtt RefreshTokensTable.Arn
-        - VPCAccessPolicy: {}
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -515,7 +499,6 @@ Resources:
                 - dynamodb:DeleteItem
               Resource:
                 - !GetAtt OtpTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         ResetPassword:
           Type: HttpApi
@@ -564,7 +547,6 @@ Resources:
                 - dynamodb:PutItem
               Resource:
                 - !GetAtt RefreshTokensTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         RenewToken:
           Type: HttpApi
@@ -597,9 +579,6 @@ Resources:
       Environment:
         Variables:
           PORTAL_SECRET_ARN: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:onboardingTP
-      VpcConfig:
-        SecurityGroupIds: !Ref AWS::NoValue
-        SubnetIds: !Ref AWS::NoValue
       Policies:
         - Statement:
             - Effect: Allow
@@ -649,7 +628,6 @@ Resources:
               Action:
                 - lambda:InvokeFunction
               Resource: !GetAtt GetCreditHistoryFunction.Arn
-        - VPCAccessPolicy: {}
       Events:
         RequestCreditHistory:
           Type: HttpApi
@@ -678,8 +656,6 @@ Resources:
       Environment:
         Variables:
           DEV_USER_EMAIL: !Ref DevUserEmail
-      Policies:
-        - VPCAccessPolicy: {}
       Events:
         GetUserInfo:
           Type: HttpApi
@@ -721,7 +697,6 @@ Resources:
               Action:
                 - dynamodb:PutItem
               Resource: !GetAtt KycTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         CreditConditions:
           Type: HttpApi
@@ -759,7 +734,6 @@ Resources:
               Resource:
                 - !GetAtt KycTable.Arn
                 - !Sub '${KycTable.Arn}/index/userId-index'
-        - VPCAccessPolicy: {}
       Events:
         GetKycStatus:
           Type: HttpApi
@@ -813,7 +787,6 @@ Resources:
               Resource: !Sub
                 - 'arn:aws:s3:::acamino-file-system-${EnvLow}/onboarding/*'
                 - EnvLow: !FindInMap [EnvLower, !Ref Environment, Value]
-        - VPCAccessPolicy: {}
       Events:
         GetUploadUrl:
           Type: HttpApi
@@ -878,7 +851,6 @@ Resources:
               Action:
                 - textract:AnalyzeDocument
               Resource: '*'
-        - VPCAccessPolicy: {}
       Events:
         ValidateIneFront:
           Type: HttpApi
@@ -937,7 +909,6 @@ Resources:
               Action:
                 - textract:AnalyzeDocument
               Resource: '*'
-        - VPCAccessPolicy: {}
       Events:
         ValidateIneBack:
           Type: HttpApi
@@ -997,7 +968,6 @@ Resources:
                 - textract:StartDocumentAnalysis
                 - textract:GetDocumentAnalysis
               Resource: '*'
-        - VPCAccessPolicy: {}
       Timeout: 900
       Events:
         ValidateAddress:
@@ -1057,7 +1027,6 @@ Resources:
               Action:
                 - textract:AnalyzeDocument
               Resource: '*'
-        - VPCAccessPolicy: {}
       Timeout: 900
       Events:
         ValidateCurp:
@@ -1118,7 +1087,6 @@ Resources:
                 - textract:StartDocumentAnalysis
                 - textract:GetDocumentAnalysis
               Resource: '*'
-        - VPCAccessPolicy: {}
       Timeout: 900
       Events:
         ValidateBank:
@@ -1170,7 +1138,6 @@ Resources:
               Action:
                 - sns:Publish
               Resource: '*'
-        - VPCAccessPolicy: {}
       Events:
         KycSendOTP:
           Type: HttpApi
@@ -1222,7 +1189,6 @@ Resources:
                 - dynamodb:DeleteItem
               Resource:
                 - !GetAtt OtpTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         KycVerifyOTP:
           Type: HttpApi
@@ -1266,7 +1232,6 @@ Resources:
                 - dynamodb:UpdateItem
               Resource:
                 - !GetAtt KycTable.Arn
-        - VPCAccessPolicy: {}
       Events:
         ReviewInfo:
           Type: HttpApi
