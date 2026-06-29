@@ -1058,6 +1058,7 @@ Resources:
                 - textract:AnalyzeDocument
               Resource: '*'
         - VPCAccessPolicy: {}
+      Timeout: 900
       Events:
         ValidateCurp:
           Type: HttpApi
@@ -1118,6 +1119,7 @@ Resources:
                 - textract:GetDocumentAnalysis
               Resource: '*'
         - VPCAccessPolicy: {}
+      Timeout: 900
       Events:
         ValidateBank:
           Type: HttpApi
