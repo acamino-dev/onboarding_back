@@ -5,8 +5,8 @@ export const KYC_STEPS = {
   ADDRESS: 'ADDRESS',
   CURP: 'CURP',
   BANK: 'BANK',
+  OTP: 'OTP',
   REVIEW: 'REVIEW',
-  BIOMETRIC: 'BIOMETRIC',
   STATUS: 'STATUS',
 } as const
 

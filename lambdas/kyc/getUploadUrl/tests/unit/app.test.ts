@@ -142,8 +142,8 @@ describe('getUploadUrl', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 704 when step is BIOMETRIC', async () => {
-    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'BIOMETRIC' })
+  it('should return 400 with errorCode 704 when step is OTP', async () => {
+    mockGetKycByUserId.mockResolvedValue({ ...kycRecord, step: 'OTP' })
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)
     const parsed = JSON.parse(result.body as string)

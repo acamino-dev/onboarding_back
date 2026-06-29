@@ -41,7 +41,7 @@ components:
           format: uuid
         step:
           type: string
-          enum: [CONDITIONS, INE_FRONT, INE_BACK, ADDRESS, CURP, BANK, REVIEW, BIOMETRIC, STATUS]
+          enum: [CONDITIONS, INE_FRONT, INE_BACK, ADDRESS, CURP, BANK, OTP, REVIEW, STATUS]
         amount:
           type: number
         term:
