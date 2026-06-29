@@ -1241,6 +1241,50 @@ Resources:
         External:
           - "@aws-sdk/*"
 
+  ReviewInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub onboardingReviewInfo${Environment}
+      CodeUri: ./
+      Handler: lambdas/kyc/reviewInfo/app.lambdaHandler
+      Description: POST /kyc/review-info - validates and saves CLABE and references for KYC REVIEW step
+      Environment:
+        Variables:
+          KYC_TABLE_NAME: !Sub onboardingKycDB${Environment}
+          DEV_USER_ID: !Ref DevUserId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt KycTable.Arn
+                - !Sub '${KycTable.Arn}/index/userId-index'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt KycTable.Arn
+        - VPCAccessPolicy: {}
+      Events:
+        ReviewInfo:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OnboardingApi
+            Path: /kyc/review-info
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+        EntryPoints:
+          - lambdas/kyc/reviewInfo/app.ts
+        External:
+          - "@aws-sdk/*"
+
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL

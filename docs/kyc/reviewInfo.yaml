@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: reviewInfo
+  version: 1.0.0
+
+paths:
+  /kyc/review-info:
+    post:
+      summary: Validates and saves CLABE and personal references for the KYC REVIEW step
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestBody'
+      responses:
+        "200":
+          description: Success or error — check errorCode
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    Reference:
+      type: object
+      required:
+        - relation
+        - fullName
+        - phoneNumber
+      properties:
+        relation:
+          type: string
+          minLength: 1
+          description: Relationship to the applicant (e.g. Hermano, Amigo)
+        fullName:
+          type: string
+          minLength: 1
+          description: Full name — must have ≥2 words, each with ≥1 vowel, no keyboard walks, no repeated chars (×3+)
+        phoneNumber:
+          type: string
+          pattern: '^\d{10}$'
+          description: 10-digit Mexican phone number
+
+    RequestBody:
+      type: object
+      required:
+        - clabe
+        - references
+      properties:
+        clabe:
+          type: string
+          pattern: '^\d{18}$'
+          description: 18-digit CLABE bank account number
+        references:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/Reference'
+
+    SuccessResponse:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+          example: 701
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - errorId
+      properties:
+        errorCode:
+          type: integer
+          description: |
+            Internal error code:
+            702 – validation error (invalid CLABE, fullName, phoneNumber, or references count)
+            703 – unauthorized (missing auth context)
+            704 – forbidden (KYC step is not REVIEW)
+            705 – not found (no active KYC process for user)
+            708 – internal server error
+          enum: [702, 703, 704, 705, 708]
+        errorId:
+          type: string
+          description: 8-character hex trace ID
+          pattern: '^[0-9a-f]{8}$'
