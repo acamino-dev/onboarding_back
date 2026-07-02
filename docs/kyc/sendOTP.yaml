@@ -67,7 +67,7 @@ components:
             702 – validation error (phoneNumber missing or not 10 digits)
             703 – auth error (missing JWT / auth context)
             705 – not found (no active KYC process for this user)
-            707 – too many requests (OTP already sent within last 2 minutes)
+            707 – too many requests (OTP already sent within last 1 minute)
             708 – generic error (DynamoDB or SNS failure)
           enum: [702, 703, 705, 707, 708]
         errorId:

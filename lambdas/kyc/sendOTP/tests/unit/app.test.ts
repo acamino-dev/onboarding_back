@@ -85,7 +85,7 @@ describe('kyc/sendOTP', () => {
     expect(parsed.errorId).toMatch(/^[0-9a-f]{8}$/)
   })
 
-  it('should return 400 with errorCode 707 when OTP was sent less than 2 minutes ago', async () => {
+  it('should return 400 with errorCode 707 when OTP was sent less than 1 minute ago', async () => {
     mockCreatePhoneOtp.mockRejectedValue(new RateLimitError('OTP already sent recently'))
     const result = await lambdaHandler(baseEvent as APIGatewayProxyEventV2)
     expect(result.statusCode).toBe(400)

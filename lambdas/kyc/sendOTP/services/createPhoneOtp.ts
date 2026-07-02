@@ -9,7 +9,7 @@ export const createPhoneOtp = async (
 ): Promise<{ code: string }> => {
   try {
     const now = Math.floor(Date.now() / 1000)
-    const twoMinutesAgo = now - 120
+    const oneMinuteAgo = now - 60
 
     const existing = await dynamoDb.query({
       TableName: tableName,
@@ -20,7 +20,7 @@ export const createPhoneOtp = async (
     if (existing.Items && existing.Items.length > 0) {
       const recentOtp = existing.Items.find(
         (item) =>
-          typeof item['created_at'] === 'number' && (item['created_at'] as number) > twoMinutesAgo
+          typeof item['created_at'] === 'number' && (item['created_at'] as number) > oneMinuteAgo
       )
       if (recentOtp) throw new RateLimitError('OTP already sent recently')
     }

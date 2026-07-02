@@ -37,7 +37,7 @@ describe('createPhoneOtp integration', () => {
     expect(stored.Items![0]['phoneNumber']).toBe(TEST_PHONE_NUMBER)
   })
 
-  it('throws RateLimitError when OTP was created less than 2 minutes ago', async () => {
+  it('throws RateLimitError when OTP was created less than 1 minute ago', async () => {
     await createPhoneOtp(TEST_CREDIT_ID, TEST_PHONE_NUMBER, OTP_TABLE)
     await expect(createPhoneOtp(TEST_CREDIT_ID, TEST_PHONE_NUMBER, OTP_TABLE)).rejects.toThrow(RateLimitError)
   })
